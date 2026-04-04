@@ -19,6 +19,12 @@
 			"bucket_name": "nice-catalogs-blog-bucket","preview_bucket_name": "nice-catalogs-blog-bucket",
 		},
 	],
+	"kv_namespaces": [
+		{
+			"binding": "SESSION",
+			"id": "1fec9c4d78c3448eb0aa1fabc854118e",
+		},
+	],
 	"observability": {
 		"enabled": true,
 	},
