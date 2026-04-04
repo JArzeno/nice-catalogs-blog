@@ -1,0 +1,750 @@
+---
+import { getMenu, getEmDashCollection } from "emdash";
+import {
+	WidgetArea,
+	EmDashHead,
+	EmDashBodyStart,
+	EmDashBodyEnd,
+} from "emdash/ui";
+import { createPublicPageContext } from "emdash/page";
+import LiveSearch from "emdash/ui/search";
+import "../styles/theme.css";
+
+interface Props {
+	title: string;
+	description?: string | null;
+	image?: string | null;
+	canonical?: string | null;
+	robots?: string | null;
+	type?: "website" | "article";
+	publishedTime?: string | null;
+	modifiedTime?: string | null;
+	author?: string | null;
+	/** Pass content reference for plugin page contributions on content pages */
+	content?: { collection: string; id: string; slug?: string | null };
+}
+
+const {
+	title,
+	description,
+	image,
+	canonical,
+	robots,
+	type = "website",
+	publishedTime,
+	modifiedTime,
+	author,
+	content,
+} = Astro.props;
+const siteTitle = "Nice Catalogs";
+// If title already includes site title (from getSeoMeta), use as-is
+const fullTitle = title.includes(siteTitle) ? title : `${title} — ${siteTitle}`;
+
+// Fetch primary menu defined in seed
+const menu = await getMenu("primary");
+
+// Fetch pages for footer
+const { entries: pages } = await getEmDashCollection("pages");
+
+// Build public page context for plugin contributions
+const pageCtx = createPublicPageContext({
+	Astro,
+	kind: content ? "content" : "custom",
+	pageType: type,
+	title: fullTitle,
+	description,
+	canonical,
+	image,
+	content,
+	seo: { ogImage: image, robots },
+	articleMeta: { publishedTime, modifiedTime, author },
+	siteName: siteTitle,
+});
+
+// Check if user is logged in (for showing admin link)
+const isLoggedIn = !!Astro.locals.user;
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link rel="icon" type="image/png" href="/favicon.png" />
+		<title>{fullTitle}</title>
+		<EmDashHead page={pageCtx} />
+	</head>
+	<body>
+		<EmDashBodyStart page={pageCtx} />
+
+		<!-- Fixed Header -->
+		<header class="site-header">
+			<div class="header-inner">
+				<!-- Logo -->
+				<a href="/" class="logo-link">
+					<div class="logo-icon">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+							fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+							<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+							<path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+							<path d="M2 7h20" />
+							<path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
+						</svg>
+					</div>
+					<span class="logo-text">Nice Catalogs</span>
+				</a>
+
+				<!-- Desktop Nav -->
+				<nav class="desktop-nav">
+					<a href="/#how-it-works">How it Works</a>
+					<a href="/#features">Features</a>
+					<a href="/#pricing">Pricing</a>
+					<a href="/blog">Blog</a>
+				</nav>
+
+				<!-- Auth Buttons -->
+				<div class="header-actions">
+					{
+						isLoggedIn && (
+							<a href="/_emdash/admin" class="nav-admin">
+								Admin
+							</a>
+						)
+					}
+					<a href="/auth" class="sign-in-link">Sign In</a>
+					<a href="/signup" class="cta-button cta-button--small">Get Started</a>
+				</div>
+
+				<!-- Mobile Menu Button -->
+				<button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Toggle menu">
+					<svg class="menu-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+						fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<line x1="4" x2="20" y1="12" y2="12" />
+						<line x1="4" x2="20" y1="6" y2="6" />
+						<line x1="4" x2="20" y1="18" y2="18" />
+					</svg>
+					<svg class="close-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
+						fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M18 6 6 18" />
+						<path d="m6 6 12 12" />
+					</svg>
+				</button>
+			</div>
+
+			<!-- Mobile Menu -->
+			<div class="mobile-menu" id="mobile-menu">
+				<a href="/#how-it-works" class="mobile-nav-link">How it Works</a>
+				<a href="/#features" class="mobile-nav-link">Features</a>
+				<a href="/#pricing" class="mobile-nav-link">Pricing</a>
+				<a href="/blog" class="mobile-nav-link">Blog</a>
+				<hr class="mobile-divider" />
+				<a href="/auth" class="mobile-nav-link">Sign In</a>
+				<a href="/signup" class="mobile-cta">Get Started</a>
+			</div>
+		</header>
+
+		<!-- Spacer for fixed header -->
+		<div class="header-spacer"></div>
+
+		<main>
+			<slot />
+		</main>
+
+		<!-- Footer -->
+		<footer class="site-footer">
+			<div class="footer-inner">
+				<div class="footer-grid">
+					<!-- Brand column -->
+					<div class="footer-brand">
+						<a href="/" class="footer-logo-link">
+							<div class="footer-logo-icon">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"
+									fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+									<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+									<path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+									<path d="M2 7h20" />
+									<path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
+								</svg>
+							</div>
+							<span class="footer-logo-text">Nice Catalogs</span>
+						</a>
+						<p class="footer-description">Create beautiful digital catalogs for your business. Share your products and services with a simple link or QR code.</p>
+					</div>
+
+					<!-- Product -->
+					<div class="footer-nav">
+						<h4 class="footer-heading">Product</h4>
+						<ul class="footer-links">
+							<li><a href="/#how-it-works">How it Works</a></li>
+							<li><a href="/#features">Features</a></li>
+							<li><a href="/#pricing">Pricing</a></li>
+							<li><a href="/blog">Blog</a></li>
+						</ul>
+					</div>
+
+					<!-- Industries -->
+					<div class="footer-nav">
+						<h4 class="footer-heading">Industries</h4>
+						<ul class="footer-links">
+							<li><a href="/for-restaurants">Restaurants</a></li>
+							<li><a href="/for-cafes">Cafes</a></li>
+							<li><a href="/for-bars">Bars</a></li>
+							<li><a href="/for-hotels">Hotels</a></li>
+							<li><a href="/for-salons">Salons</a></li>
+							<li><a href="/for-spas">Spas</a></li>
+						</ul>
+					</div>
+
+					<!-- Legal -->
+					<div class="footer-nav">
+						<h4 class="footer-heading">Legal</h4>
+						<ul class="footer-links">
+							<li><a href="/privacy-policy">Privacy Policy</a></li>
+							<li><a href="/terms-of-use">Terms of Use</a></li>
+							<li><a href="/accessibility">Accessibility</a></li>
+						</ul>
+					</div>
+				</div>
+
+				<!-- Bottom bar -->
+				<div class="footer-bottom">
+					<p class="footer-copyright">&copy; 2026 Nice Catalogs. All rights reserved.</p>
+				</div>
+			</div>
+		</footer>
+
+		<script>
+			// Mobile menu toggle
+			const menuBtn = document.getElementById("mobile-menu-btn");
+			const mobileMenu = document.getElementById("mobile-menu");
+			if (menuBtn && mobileMenu) {
+				menuBtn.addEventListener("click", () => {
+					const isOpen = mobileMenu.classList.toggle("open");
+					menuBtn.classList.toggle("open", isOpen);
+				});
+			}
+		</script>
+
+		<style is:global>
+			*:where(:not([class*="emdash"]):not([class*="ec-"])),
+			*:where(:not([class*="emdash"]):not([class*="ec-"]))::before,
+			*:where(:not([class*="emdash"]):not([class*="ec-"]))::after {
+				box-sizing: border-box;
+			}
+
+			body,
+			h1,
+			h2,
+			h3,
+			h4,
+			h5,
+			h6,
+			p,
+			ul,
+			ol,
+			figure,
+			blockquote,
+			dl,
+			dd {
+				margin: 0;
+			}
+
+			ul,
+			ol {
+				padding: 0;
+			}
+
+			html {
+				scroll-behavior: smooth;
+			}
+
+			html,
+			body {
+				overflow-x: hidden;
+			}
+
+			body {
+				font-family: var(--font-sans);
+				font-size: var(--font-size-base, 1rem);
+				line-height: 1.7;
+				color: var(--color-text);
+				background: var(--color-bg);
+				-webkit-font-smoothing: antialiased;
+				-moz-osx-font-smoothing: grayscale;
+				min-height: 100vh;
+			}
+
+			a:where(:not([class*="emdash"]):not([class*="ec-"])) {
+				color: var(--color-accent);
+				text-decoration: none;
+				transition: color var(--transition-fast);
+			}
+
+			a:where(:not([class*="emdash"]):not([class*="ec-"])):hover {
+				color: var(--color-accent-hover);
+			}
+
+			img {
+				max-width: 100%;
+				height: auto;
+				display: block;
+			}
+
+			h1,
+			h2,
+			h3,
+			h4,
+			h5,
+			h6 {
+				font-family: var(--font-sans);
+				line-height: 1.15;
+				font-weight: 700;
+			}
+
+			::selection {
+				background: var(--color-accent);
+				color: white;
+			}
+
+			/* Prose content styles for blog posts */
+			.prose a {
+				color: var(--color-accent);
+				text-decoration: underline;
+			}
+
+			.prose strong {
+				font-weight: 600;
+			}
+
+			.prose ul {
+				list-style: disc;
+				padding-left: 1.25rem;
+				margin: 0.25rem 0;
+			}
+
+			.prose ol {
+				list-style: decimal;
+				padding-left: 1.25rem;
+				margin: 0.25rem 0;
+			}
+
+			.prose p {
+				margin: 0.5rem 0;
+			}
+		</style>
+
+		<style>
+			/* ========== HEADER ========== */
+			.site-header {
+				position: fixed;
+				top: 0;
+				left: 0;
+				right: 0;
+				z-index: 50;
+				background: white;
+				box-shadow: var(--shadow-md);
+			}
+
+			.header-inner {
+				max-width: var(--wide-width);
+				margin: 0 auto;
+				padding: 0 1rem;
+				height: var(--nav-height);
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+			}
+
+			@media (min-width: 640px) {
+				.header-inner {
+					padding: 0 1.5rem;
+				}
+			}
+
+			@media (min-width: 1024px) {
+				.header-inner {
+					padding: 0 2rem;
+				}
+			}
+
+			.header-spacer {
+				height: var(--nav-height);
+			}
+
+			/* Logo */
+			.logo-link {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				text-decoration: none;
+			}
+
+			.logo-icon {
+				width: 2.5rem;
+				height: 2.5rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: var(--radius);
+				background: var(--color-accent);
+				color: white;
+				transition: background var(--transition-fast);
+			}
+
+			.logo-link:hover .logo-icon {
+				background: var(--color-accent-hover);
+			}
+
+			.logo-text {
+				font-size: 1.25rem;
+				font-weight: 700;
+				color: var(--color-text);
+			}
+
+			.logo-link:hover .logo-text {
+				color: var(--color-text);
+			}
+
+			/* Desktop Nav */
+			.desktop-nav {
+				display: none;
+				align-items: center;
+				gap: 2rem;
+			}
+
+			.desktop-nav a {
+				color: var(--color-text-secondary);
+				font-weight: 500;
+				text-decoration: none;
+				transition: color var(--transition-fast);
+			}
+
+			.desktop-nav a:hover {
+				color: var(--color-text);
+			}
+
+			@media (min-width: 768px) {
+				.desktop-nav {
+					display: flex;
+				}
+			}
+
+			/* Header Actions */
+			.header-actions {
+				display: none;
+				align-items: center;
+				gap: 1rem;
+			}
+
+			.sign-in-link {
+				color: var(--color-text-secondary) !important;
+				font-weight: 500;
+				text-decoration: none;
+				transition: color var(--transition-fast);
+			}
+
+			.sign-in-link:hover {
+				color: var(--color-text) !important;
+			}
+
+			.nav-admin {
+				font-size: 0.875rem;
+				color: var(--color-muted);
+				text-decoration: none;
+				opacity: 0.5;
+				transition: opacity var(--transition-fast);
+			}
+
+			.nav-admin:hover {
+				opacity: 1;
+			}
+
+			@media (min-width: 768px) {
+				.header-actions {
+					display: flex;
+				}
+			}
+
+			/* CTA Buttons */
+			.cta-button {
+				display: inline-flex;
+				align-items: center;
+				justify-content: center;
+				background: var(--color-accent);
+				color: white !important;
+				font-weight: 600;
+				border-radius: var(--radius);
+				transition: all var(--transition-fast);
+				text-decoration: none;
+				box-shadow: var(--shadow-md);
+			}
+
+			.cta-button:hover {
+				background: var(--color-accent-hover);
+				color: white !important;
+				box-shadow: var(--shadow-xl);
+			}
+
+			.cta-button--small {
+				padding: 0.5rem 1rem;
+				border-radius: 0.375rem;
+				box-shadow: none;
+			}
+
+			.cta-button--small:hover {
+				box-shadow: none;
+			}
+
+			.cta-button--large {
+				padding: 0.875rem 1.5rem;
+				font-weight: 600;
+				box-shadow: var(--shadow-md);
+			}
+
+			.cta-button--large:hover {
+				box-shadow: var(--shadow-xl);
+			}
+
+			/* Mobile Menu Button */
+			.mobile-menu-btn {
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				padding: 0.5rem;
+				color: var(--color-text-secondary);
+				background: none;
+				border: none;
+				border-radius: var(--radius);
+				cursor: pointer;
+				transition: all var(--transition-fast);
+			}
+
+			.mobile-menu-btn:hover {
+				color: var(--color-text);
+				background: var(--color-border-subtle);
+			}
+
+			.mobile-menu-btn .close-icon {
+				display: none;
+			}
+
+			.mobile-menu-btn.open .menu-icon {
+				display: none;
+			}
+
+			.mobile-menu-btn.open .close-icon {
+				display: block;
+			}
+
+			@media (min-width: 768px) {
+				.mobile-menu-btn {
+					display: none;
+				}
+			}
+
+			/* Mobile Menu */
+			.mobile-menu {
+				display: none;
+				background: white;
+				border-top: 1px solid var(--color-border);
+				padding: 1rem;
+			}
+
+			.mobile-menu.open {
+				display: block;
+			}
+
+			@media (min-width: 768px) {
+				.mobile-menu {
+					display: none !important;
+				}
+			}
+
+			.mobile-nav-link {
+				display: block;
+				padding: 0.5rem 1rem;
+				border-radius: 0.375rem;
+				color: var(--color-text-secondary) !important;
+				font-weight: 500;
+				text-decoration: none;
+				transition: all var(--transition-fast);
+			}
+
+			.mobile-nav-link:hover {
+				color: var(--color-text) !important;
+				background: var(--color-bg-subtle);
+			}
+
+			.mobile-divider {
+				border: none;
+				border-top: 1px solid var(--color-border-subtle);
+				margin: 0.5rem 0;
+			}
+
+			.mobile-cta {
+				display: block;
+				padding: 0.5rem 1rem;
+				border-radius: 0.375rem;
+				background: var(--color-accent);
+				color: white !important;
+				text-align: center;
+				font-weight: 600;
+				text-decoration: none;
+				transition: background var(--transition-fast);
+			}
+
+			.mobile-cta:hover {
+				background: var(--color-accent-hover);
+			}
+
+			/* ========== MAIN ========== */
+			main {
+				min-height: calc(100vh - var(--nav-height) - 300px);
+			}
+
+			/* ========== FOOTER ========== */
+			.site-footer {
+				background: white;
+				border-top: 1px solid var(--color-border-subtle);
+			}
+
+			.footer-inner {
+				max-width: var(--wide-width);
+				margin: 0 auto;
+				padding: 3rem 1rem;
+			}
+
+			@media (min-width: 640px) {
+				.footer-inner {
+					padding: 3rem 1.5rem;
+				}
+			}
+
+			@media (min-width: 1024px) {
+				.footer-inner {
+					padding: 3rem 2rem;
+				}
+			}
+
+			.footer-grid {
+				display: grid;
+				grid-template-columns: 1fr;
+				gap: 2rem;
+			}
+
+			@media (min-width: 768px) {
+				.footer-grid {
+					grid-template-columns: 2fr 1fr 1fr 1fr;
+					gap: 2rem;
+				}
+			}
+
+			/* Footer Brand */
+			.footer-brand {
+				max-width: 320px;
+			}
+
+			.footer-logo-link {
+				display: flex;
+				align-items: center;
+				gap: 0.5rem;
+				text-decoration: none;
+				margin-bottom: 1rem;
+			}
+
+			.footer-logo-icon {
+				width: 2.25rem;
+				height: 2.25rem;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: var(--radius);
+				background: var(--color-accent);
+				color: white;
+			}
+
+			.footer-logo-text {
+				font-size: 1.125rem;
+				font-weight: 700;
+				color: var(--color-text);
+			}
+
+			.footer-logo-link:hover .footer-logo-text {
+				color: var(--color-text);
+			}
+
+			.footer-description {
+				font-size: 0.875rem;
+				color: var(--color-muted);
+				line-height: 1.6;
+			}
+
+			/* Footer Nav */
+			.footer-heading {
+				font-size: 0.875rem;
+				font-weight: 600;
+				color: var(--color-text);
+				text-transform: uppercase;
+				letter-spacing: 0.05em;
+				margin-bottom: 1rem;
+			}
+
+			.footer-links {
+				list-style: none;
+				padding: 0;
+			}
+
+			.footer-links li {
+				margin-bottom: 0.75rem;
+			}
+
+			.footer-links a {
+				font-size: 0.875rem;
+				color: var(--color-muted) !important;
+				text-decoration: none;
+				transition: color var(--transition-fast);
+			}
+
+			.footer-links a:hover {
+				color: var(--color-text) !important;
+			}
+
+			/* Footer Bottom */
+			.footer-bottom {
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between;
+				gap: 1rem;
+				padding-top: 2rem;
+				margin-top: 2.5rem;
+				border-top: 1px solid var(--color-border-subtle);
+			}
+
+			@media (min-width: 640px) {
+				.footer-bottom {
+					flex-direction: row;
+				}
+			}
+
+			.footer-copyright {
+				font-size: 0.875rem;
+				color: var(--color-muted-light);
+			}
+
+			/* ========== EMDASH SEARCH OVERRIDES ========== */
+			:root {
+				--emdash-search-bg: var(--color-bg);
+				--emdash-search-text: var(--color-text);
+				--emdash-search-muted: var(--color-muted);
+				--emdash-search-border: var(--color-border);
+				--emdash-search-hover: var(--color-surface);
+				--emdash-search-highlight: var(--color-text);
+			}
+		</style>
+
+		<EmDashBodyEnd page={pageCtx} />
+	</body>
+</html>

@@ -1,0 +1,54 @@
+/*
+  theme.css — Nice Catalogs brand theme
+  Overrides default EmDash theme variables to match the Nice Catalogs design system.
+*/
+
+:root {
+	/* --- Brand Colors --- */
+	--color-bg: #ffffff;
+	--color-bg-subtle: #f9fafb; /* gray-50 */
+	--color-text: #111827; /* gray-900 */
+	--color-text-secondary: #4b5563; /* gray-600 */
+	--color-muted: #6b7280; /* gray-500 */
+	--color-muted-light: #9ca3af; /* gray-400 */
+	--color-border: #e5e7eb; /* gray-200 */
+	--color-border-subtle: #f3f4f6; /* gray-100 */
+	--color-surface: #f9fafb; /* gray-50 */
+	--color-accent: #ed1c24;
+	--color-accent-hover: #d91920;
+	--color-on-accent: white;
+	--color-accent-bg: #fef2f2; /* red-50 */
+	--color-accent-ring: color-mix(in srgb, #ed1c24 25%, transparent);
+
+	/* --- Fonts (system stack, no custom fonts) --- */
+	--font-sans: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont,
+		"Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+		"Liberation Mono", "Courier New", monospace;
+
+	/* --- Layout --- */
+	--content-width: 720px;
+	--wide-width: 80rem; /* max-w-7xl = 1280px */
+	--gutter-width: 220px;
+	--meta-col-width: 180px;
+	--nav-height: 64px;
+
+	/* --- Borders & radius --- */
+	--radius: 8px; /* rounded-lg */
+	--radius-lg: 16px; /* rounded-2xl for cards */
+	--radius-full: 9999px; /* rounded-full for pills */
+
+	/* --- Shadows --- */
+	--shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+		0 2px 4px -2px rgba(0, 0, 0, 0.1);
+	--shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1),
+		0 8px 10px -6px rgba(0, 0, 0, 0.1);
+	--shadow-dropdown: 0 8px 30px rgba(0, 0, 0, 0.12);
+	--shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+	/* --- Transitions --- */
+	--transition-fast: 150ms ease;
+	--transition-base: 200ms ease;
+	--transition-slow: 300ms ease;
+}

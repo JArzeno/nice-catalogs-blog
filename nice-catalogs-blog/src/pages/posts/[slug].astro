@@ -1,0 +1,593 @@
+---
+import {
+	getEmDashEntry,
+	getEmDashCollection,
+	getEntryTerms,
+	getSeoMeta,
+} from "emdash";
+import {
+	Image,
+	PortableText,
+	Comments,
+	CommentForm,
+	WidgetArea,
+} from "emdash/ui";
+import Base from "../../layouts/Base.astro";
+import PostCard from "../../components/PostCard.astro";
+import { getReadingTime } from "../../utils/reading-time";
+
+const { slug } = Astro.params;
+
+if (!slug) {
+	return Astro.redirect("/404");
+}
+
+const { entry: post, cacheHint } = await getEmDashEntry("posts", slug);
+
+if (!post) {
+	return Astro.redirect("/404");
+}
+
+Astro.cache.set(cacheHint);
+
+// Get featured image URL for OG fallback
+function getImageUrl(img: unknown): string | undefined {
+	if (!img || typeof img !== "object") return undefined;
+	const image = img as Record<string, unknown>;
+	if (typeof image.src === "string" && image.src) {
+		return image.src.startsWith("http")
+			? image.src
+			: `${Astro.url.origin}${image.src}`;
+	}
+	const meta = image.meta as Record<string, unknown> | undefined;
+	const storageKey =
+		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
+		(typeof image.id === "string" ? image.id : undefined);
+	if (storageKey) {
+		return `${Astro.url.origin}/_emdash/api/media/file/${storageKey}`;
+	}
+	return undefined;
+}
+const featuredImageUrl = getImageUrl(post.data.featured_image);
+
+// Generate SEO meta from content
+const seo = getSeoMeta(post, {
+	siteTitle: "Nice Catalogs",
+	siteUrl: Astro.url.origin,
+	path: `/posts/${slug}`,
+	defaultOgImage: featuredImageUrl,
+});
+
+// Get tags for this post
+const tags = await getEntryTerms("posts", post.data.id, "tag");
+
+// Bylines are already hydrated by getEmDashEntry
+const bylines = post.data.bylines ?? [];
+
+// Get reading time
+const readingTime = getReadingTime(post.data.content);
+
+// Get other posts for "More posts" section
+const { entries: recentPosts } = await getEmDashCollection("posts", {
+	orderBy: { published_at: "desc" },
+	limit: 4,
+});
+const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
+
+// Fetch tags for related posts
+const otherPostsWithTags = await Promise.all(
+	otherPosts.map(async (p) => {
+		const postTags = await getEntryTerms("posts", p.data.id, "tag");
+		const postBylines = p.data.bylines ?? [];
+		return { post: p, tags: postTags, bylines: postBylines };
+	})
+);
+
+const publishDate =
+	post.data.publishedAt?.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	}) ?? null;
+---
+
+<Base
+	title={seo.title}
+	description={seo.description}
+	image={seo.ogImage}
+	canonical={seo.canonical}
+	robots={seo.robots}
+	type="article"
+	publishedTime={post.data.publishedAt?.toISOString() ?? null}
+	modifiedTime={post.data.updatedAt.toISOString()}
+	content={{ collection: "posts", id: post.data.id, slug }}
+>
+	<article class="article">
+		{/* Article Header */}
+		<header class="article-header">
+			<div class="article-header-inner">
+				<div class="article-meta">
+					{
+						tags.length > 0 && (
+							<a href={`/tag/${tags[0].slug}`} class="article-category-pill">
+								{tags[0].label}
+							</a>
+						)
+					}
+					{publishDate && <span class="article-date">{publishDate}</span>}
+					<span class="article-reading-time">{readingTime} min read</span>
+				</div>
+				<h1 class="article-title" {...post.edit.title}>{post.data.title}</h1>
+				{
+					post.data.excerpt && (
+						<p class="article-excerpt">{post.data.excerpt}</p>
+					)
+				}
+				{
+					bylines.length > 0 && (
+						<div class="article-bylines">
+							{bylines.map((credit) => (
+								<div class="article-byline">
+									{credit.byline.avatarMediaId && (
+										<img
+											src={`/_emdash/api/media/file/${credit.byline.avatarMediaId}`}
+											alt={credit.byline.displayName}
+											class="article-byline-avatar"
+										/>
+									)}
+									<div class="article-byline-info">
+										<span class="article-byline-name">
+											{credit.byline.displayName}
+										</span>
+										{credit.roleLabel && (
+											<span class="article-byline-role">{credit.roleLabel}</span>
+										)}
+									</div>
+								</div>
+							))}
+						</div>
+					)
+				}
+			</div>
+		</header>
+
+		{/* Hero Image */}
+		{
+			post.data.featured_image && (
+				<div class="article-hero" {...post.edit.featured_image}>
+					<div class="article-hero-inner">
+						<Image image={post.data.featured_image} />
+					</div>
+				</div>
+			)
+		}
+
+		{/* Article Content */}
+		<div class="article-body">
+			<div class="article-content prose">
+				<PortableText value={post.data.content} />
+			</div>
+
+			{/* Inline CTA Banner */}
+			<div class="inline-cta">
+				<h3 class="inline-cta-title">Ready to create your digital catalog?</h3>
+				<p class="inline-cta-text">Join thousands of businesses using Nice Catalogs.</p>
+				<a href="/signup" class="cta-button cta-button--large">
+					Get Started Free
+				</a>
+			</div>
+
+			{/* Tags */}
+			{
+				tags.length > 0 && (
+					<div class="article-tags">
+						{tags.map((t) => (
+							<a href={`/tag/${t.slug}`} class="article-tag">
+								{t.label}
+							</a>
+						))}
+					</div>
+				)
+			}
+
+			{/* Comments */}
+			<div class="article-comments">
+				<Comments collection="posts" contentId={post.data.id} threaded />
+				<CommentForm collection="posts" contentId={post.data.id} />
+			</div>
+		</div>
+	</article>
+
+	{/* Related Posts */}
+	{
+		otherPostsWithTags.length > 0 && (
+			<section class="related-posts">
+				<div class="related-inner">
+					<h2 class="related-title">Continue Reading</h2>
+					<div class="related-grid">
+						{otherPostsWithTags.map(
+							({ post: p, tags: postTags, bylines: postBylines }) => (
+								<PostCard
+									title={p.data.title}
+									excerpt={p.data.excerpt}
+									featuredImage={p.data.featured_image}
+									href={`/posts/${p.id}`}
+									date={p.data.publishedAt ?? undefined}
+									readingTime={getReadingTime(p.data.content)}
+									tags={postTags.map((t) => ({ slug: t.slug, label: t.label }))}
+									bylines={postBylines}
+								/>
+							)
+						)}
+					</div>
+				</div>
+			</section>
+		)
+	}
+</Base>
+
+<style>
+	/* Article Header */
+	.article-header {
+		padding: 3rem 0 2rem;
+		text-align: center;
+	}
+
+	.article-header-inner {
+		max-width: var(--content-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.article-header-inner {
+			padding: 0 1.5rem;
+		}
+	}
+
+	.article-meta {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 0.75rem;
+		margin-bottom: 1.25rem;
+	}
+
+	.article-category-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		border-radius: var(--radius-full);
+		background: var(--color-accent-bg);
+		color: var(--color-accent) !important;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.article-date {
+		font-size: 0.75rem;
+		color: var(--color-muted-light);
+	}
+
+	.article-reading-time {
+		font-size: 0.75rem;
+		color: var(--color-muted-light);
+	}
+
+	.article-title {
+		font-size: 2.25rem;
+		font-weight: 800;
+		color: var(--color-text);
+		line-height: 1.15;
+		margin-bottom: 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.article-title {
+			font-size: 3rem;
+		}
+	}
+
+	.article-excerpt {
+		font-size: 1.25rem;
+		color: var(--color-text-secondary);
+		line-height: 1.6;
+		margin-bottom: 1.5rem;
+	}
+
+	/* Bylines */
+	.article-bylines {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		flex-wrap: wrap;
+		gap: 1rem;
+	}
+
+	.article-byline {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+	}
+
+	.article-byline-avatar {
+		width: 2.5rem;
+		height: 2.5rem;
+		border-radius: 50%;
+		object-fit: cover;
+	}
+
+	.article-byline-info {
+		display: flex;
+		flex-direction: column;
+		text-align: left;
+	}
+
+	.article-byline-name {
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: var(--color-text);
+	}
+
+	.article-byline-role {
+		font-size: 0.75rem;
+		color: var(--color-muted);
+	}
+
+	/* Hero Image */
+	.article-hero {
+		margin-bottom: 2.5rem;
+	}
+
+	.article-hero-inner {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.article-hero-inner {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.article-hero-inner {
+			padding: 0 2rem;
+		}
+	}
+
+	.article-hero-inner img {
+		width: 100%;
+		max-height: 500px;
+		object-fit: cover;
+		border-radius: var(--radius-lg);
+	}
+
+	/* Article Body */
+	.article-body {
+		max-width: var(--content-width);
+		margin: 0 auto;
+		padding: 0 1rem 3rem;
+	}
+
+	@media (min-width: 640px) {
+		.article-body {
+			padding: 0 1.5rem 3rem;
+		}
+	}
+
+	/* Article Content Typography */
+	.article-content {
+		font-size: 1.125rem;
+		line-height: 1.75;
+		color: var(--color-text-secondary);
+	}
+
+	.article-content :global(p) {
+		margin-bottom: 1.5em;
+	}
+
+	.article-content :global(h2) {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-top: 2.5em;
+		margin-bottom: 0.75em;
+		scroll-margin-top: calc(var(--nav-height) + 1rem);
+	}
+
+	.article-content :global(h3) {
+		font-size: 1.25rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-top: 2em;
+		margin-bottom: 0.5em;
+		scroll-margin-top: calc(var(--nav-height) + 1rem);
+	}
+
+	.article-content :global(blockquote) {
+		margin: 2em 0;
+		padding: 1rem 1.5rem;
+		border-left: 3px solid var(--color-accent);
+		background: var(--color-bg-subtle);
+		border-radius: 0 var(--radius) var(--radius) 0;
+		color: var(--color-text-secondary);
+		font-style: italic;
+	}
+
+	.article-content :global(pre) {
+		margin: 2em 0;
+		padding: 1.25rem;
+		background: var(--color-surface);
+		border: 1px solid var(--color-border);
+		border-radius: var(--radius);
+		overflow-x: auto;
+		font-family: var(--font-mono);
+		font-size: 0.875rem;
+		line-height: 1.6;
+	}
+
+	.article-content :global(code) {
+		font-family: var(--font-mono);
+		font-size: 0.9em;
+		background: var(--color-surface);
+		padding: 0.2em 0.4em;
+		border-radius: 4px;
+	}
+
+	.article-content :global(pre code) {
+		background: none;
+		padding: 0;
+	}
+
+	.article-content :global(ul),
+	.article-content :global(ol) {
+		margin-bottom: 1.5em;
+		padding-left: 1.5em;
+	}
+
+	.article-content :global(li) {
+		margin-bottom: 0.5em;
+	}
+
+	.article-content :global(img) {
+		margin: 2em 0;
+		border-radius: var(--radius-lg);
+	}
+
+	.article-content :global(hr) {
+		margin: 3em 0;
+		border: none;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-content :global(a) {
+		color: var(--color-accent);
+		text-decoration: underline;
+	}
+
+	.article-content :global(a:hover) {
+		color: var(--color-accent-hover);
+	}
+
+	/* Inline CTA */
+	.inline-cta {
+		margin: 3rem 0;
+		padding: 2rem 1.5rem;
+		background: white;
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--color-border-subtle);
+		box-shadow: var(--shadow-sm);
+		text-align: center;
+	}
+
+	.inline-cta-title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-bottom: 0.5rem;
+	}
+
+	.inline-cta-text {
+		font-size: 1rem;
+		color: var(--color-text-secondary);
+		margin-bottom: 1.25rem;
+	}
+
+	/* Tags */
+	.article-tags {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		margin-bottom: 3rem;
+		padding-top: 2rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-tag {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		border-radius: var(--radius-full);
+		background: var(--color-border-subtle);
+		color: var(--color-text-secondary) !important;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: all var(--transition-fast);
+	}
+
+	.article-tag:hover {
+		background: var(--color-border);
+		color: var(--color-text) !important;
+	}
+
+	/* Comments */
+	.article-comments {
+		padding-top: 2.5rem;
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-comments :global(.ec-comments-heading) {
+		font-size: 1.5rem;
+		font-weight: 700;
+		margin-bottom: 2rem;
+	}
+
+	.article-comments :global(.ec-comment-form-submit) {
+		background: var(--color-accent) !important;
+		color: white !important;
+	}
+
+	/* Related Posts */
+	.related-posts {
+		background: var(--color-bg-subtle);
+		padding: 4rem 0;
+	}
+
+	.related-inner {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.related-inner {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.related-inner {
+			padding: 0 2rem;
+		}
+	}
+
+	.related-title {
+		font-size: 1.875rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-bottom: 2rem;
+	}
+
+	.related-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.related-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.related-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+</style>

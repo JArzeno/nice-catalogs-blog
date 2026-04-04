@@ -1,0 +1,549 @@
+---
+import { getEmDashCollection, getEntryTerms, getTerms } from "emdash";
+import { Image } from "emdash/ui";
+import Base from "../layouts/Base.astro";
+import PostCard from "../components/PostCard.astro";
+import { getReadingTime } from "../utils/reading-time";
+
+const { entries: posts, cacheHint } = await getEmDashCollection("posts");
+
+Astro.cache.set(cacheHint);
+
+const sortedPosts = posts.toSorted((a, b) => {
+	const dateA = a.data.publishedAt?.getTime() ?? 0;
+	const dateB = b.data.publishedAt?.getTime() ?? 0;
+	return dateB - dateA;
+});
+
+// Find the first post with a featured image for the hero
+const featuredPost = sortedPosts.find((p) => p.data.featured_image);
+const featuredIndex = featuredPost ? sortedPosts.indexOf(featuredPost) : -1;
+
+// Get remaining posts (exclude featured if found)
+const gridPosts = sortedPosts.filter((_, i) => i !== featuredIndex);
+
+// Fetch tags for featured post
+let featuredTags: Array<{ slug: string; label: string }> = [];
+if (featuredPost) {
+	const tags = await getEntryTerms("posts", featuredPost.data.id, "tag");
+	featuredTags = tags.map((t) => ({ slug: t.slug, label: t.label }));
+}
+
+// Fetch tags for grid posts
+const gridPostsWithTags = await Promise.all(
+	gridPosts.map(async (post) => {
+		const tags = await getEntryTerms("posts", post.data.id, "tag");
+		const bylines = post.data.bylines ?? [];
+		return {
+			post,
+			tags: tags.map((t) => ({ slug: t.slug, label: t.label })),
+			bylines,
+		};
+	})
+);
+
+// Get all categories for filter pills
+let categories: Array<{ slug: string; label: string }> = [];
+try {
+	categories = await getTerms("category");
+} catch {
+	// categories taxonomy may not exist
+}
+
+// Format date helper
+function formatDate(date: Date | null | undefined) {
+	if (!date) return null;
+	return date.toLocaleDateString("en-US", {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+	});
+}
+---
+
+<Base title="Blog" description="Tips, guides, and insights for businesses using digital catalogs">
+	{
+		posts.length === 0 ? (
+			<section class="empty-state">
+				<h2>No posts yet</h2>
+				<p>Create your first post in the admin panel.</p>
+				<a href="/_emdash/admin/content/posts/new" class="cta-button cta-button--large">
+					Create a post
+				</a>
+			</section>
+		) : (
+			<div class="blog-home">
+				{/* Hero Section */}
+				<section class="hero-section">
+					<div class="hero-container">
+						<h1 class="hero-title">Nice Catalogs Blog</h1>
+						<p class="hero-subtitle">
+							Tips, guides, and insights to help you create stunning digital catalogs for your business.
+						</p>
+					</div>
+				</section>
+
+				{/* Category Filter Pills */}
+				{categories.length > 0 && (
+					<section class="filters-section">
+						<div class="filters-container">
+							<div class="filter-pills">
+								<a href="/" class="filter-pill filter-pill--active">All</a>
+								{categories.map((cat) => (
+									<a href={`/category/${cat.slug}`} class="filter-pill">
+										{cat.label}
+									</a>
+								))}
+							</div>
+						</div>
+					</section>
+				)}
+
+				{/* Featured Post */}
+				{featuredPost && (
+					<section class="featured-section">
+						<div class="featured-container">
+							<article class="featured-card">
+								<a href={`/posts/${featuredPost.id}`} class="featured-image-link">
+									<Image image={featuredPost.data.featured_image} />
+								</a>
+								<div class="featured-content">
+									<div class="featured-meta">
+										{featuredTags.length > 0 && (
+											<a href={`/tag/${featuredTags[0].slug}`} class="featured-category-pill">
+												{featuredTags[0].label}
+											</a>
+										)}
+										{formatDate(featuredPost.data.publishedAt) && (
+											<span class="featured-date">
+												{formatDate(featuredPost.data.publishedAt)}
+											</span>
+										)}
+									</div>
+									<a href={`/posts/${featuredPost.id}`} class="featured-title-link">
+										<h2 class="featured-title">{featuredPost.data.title}</h2>
+									</a>
+									{featuredPost.data.excerpt && (
+										<p class="featured-excerpt">{featuredPost.data.excerpt}</p>
+									)}
+									<a href={`/posts/${featuredPost.id}`} class="featured-read-more">
+										Read more &rarr;
+									</a>
+								</div>
+							</article>
+						</div>
+					</section>
+				)}
+
+				{/* Posts Grid */}
+				{gridPostsWithTags.length > 0 && (
+					<section class="posts-section">
+						<div class="posts-container">
+							<h2 class="section-title">Latest Articles</h2>
+							<div class="posts-grid">
+								{gridPostsWithTags.map(({ post, tags, bylines }) => (
+									<PostCard
+										title={post.data.title ?? "Untitled"}
+										excerpt={post.data.excerpt}
+										featuredImage={post.data.featured_image}
+										href={`/posts/${post.id}`}
+										date={post.data.publishedAt ?? undefined}
+										readingTime={getReadingTime(post.data.content)}
+										tags={tags}
+										bylines={bylines}
+									/>
+								))}
+							</div>
+						</div>
+					</section>
+				)}
+
+				{/* CTA Banner */}
+				<section class="cta-section">
+					<div class="cta-container">
+						<div class="cta-banner">
+							<h3 class="cta-banner-title">Ready to create your digital catalog?</h3>
+							<p class="cta-banner-text">Join thousands of businesses using Nice Catalogs.</p>
+							<a href="/signup" class="cta-button cta-button--large">
+								Get Started Free
+							</a>
+						</div>
+					</div>
+				</section>
+			</div>
+		)
+	}
+</Base>
+
+<style>
+	.blog-home {
+		background: white;
+	}
+
+	/* Hero */
+	.hero-section {
+		padding: 3rem 0 2rem;
+		text-align: center;
+	}
+
+	.hero-container {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.hero-container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.hero-container {
+			padding: 0 2rem;
+		}
+	}
+
+	.hero-title {
+		font-size: 2.25rem;
+		font-weight: 800;
+		color: var(--color-text);
+		margin-bottom: 0.75rem;
+	}
+
+	@media (min-width: 640px) {
+		.hero-title {
+			font-size: 3rem;
+		}
+	}
+
+	.hero-subtitle {
+		font-size: 1.125rem;
+		color: var(--color-text-secondary);
+		line-height: 1.6;
+		max-width: 600px;
+		margin: 0 auto;
+	}
+
+	/* Filters */
+	.filters-section {
+		padding: 1rem 0 2rem;
+	}
+
+	.filters-container {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.filters-container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.filters-container {
+			padding: 0 2rem;
+		}
+	}
+
+	.filter-pills {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.5rem;
+		justify-content: center;
+	}
+
+	.filter-pill {
+		padding: 0.5rem 1rem;
+		border-radius: var(--radius-full);
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+		transition: all var(--transition-fast);
+		background: var(--color-border-subtle);
+		color: var(--color-text-secondary) !important;
+	}
+
+	.filter-pill:hover {
+		background: var(--color-border);
+		color: var(--color-text) !important;
+	}
+
+	.filter-pill--active {
+		background: var(--color-accent) !important;
+		color: white !important;
+	}
+
+	.filter-pill--active:hover {
+		background: var(--color-accent-hover) !important;
+		color: white !important;
+	}
+
+	/* Featured */
+	.featured-section {
+		padding: 0 0 3rem;
+	}
+
+	.featured-container {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.featured-container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.featured-container {
+			padding: 0 2rem;
+		}
+	}
+
+	.featured-card {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
+		background: white;
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+		border: 1px solid var(--color-border-subtle);
+		box-shadow: var(--shadow-sm);
+		transition: all 300ms ease;
+	}
+
+	.featured-card:hover {
+		box-shadow: var(--shadow-xl);
+	}
+
+	@media (min-width: 768px) {
+		.featured-card {
+			grid-template-columns: 1fr 1fr;
+			gap: 0;
+		}
+	}
+
+	.featured-image-link {
+		display: block;
+		overflow: hidden;
+	}
+
+	.featured-image-link img {
+		width: 100%;
+		height: 100%;
+		min-height: 16rem;
+		object-fit: cover;
+		transition: transform 400ms ease;
+	}
+
+	.featured-card:hover .featured-image-link img {
+		transform: scale(1.02);
+	}
+
+	.featured-content {
+		padding: 1.5rem;
+		display: flex;
+		flex-direction: column;
+		justify-content: center;
+	}
+
+	@media (min-width: 768px) {
+		.featured-content {
+			padding: 2.5rem;
+		}
+	}
+
+	.featured-meta {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		margin-bottom: 1rem;
+	}
+
+	.featured-category-pill {
+		display: inline-flex;
+		align-items: center;
+		padding: 0.375rem 0.75rem;
+		border-radius: var(--radius-full);
+		background: var(--color-accent-bg);
+		color: var(--color-accent) !important;
+		font-size: 0.875rem;
+		font-weight: 500;
+		text-decoration: none;
+	}
+
+	.featured-date {
+		font-size: 0.75rem;
+		color: var(--color-muted-light);
+	}
+
+	.featured-title-link {
+		text-decoration: none;
+		color: inherit;
+	}
+
+	.featured-title {
+		font-size: 1.5rem;
+		font-weight: 700;
+		color: var(--color-text);
+		line-height: 1.25;
+		transition: color var(--transition-fast);
+	}
+
+	@media (min-width: 640px) {
+		.featured-title {
+			font-size: 2rem;
+		}
+	}
+
+	.featured-title-link:hover .featured-title {
+		color: var(--color-accent);
+	}
+
+	.featured-excerpt {
+		margin-top: 0.75rem;
+		font-size: 1rem;
+		color: var(--color-text-secondary);
+		line-height: 1.6;
+		display: -webkit-box;
+		-webkit-line-clamp: 3;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	.featured-read-more {
+		margin-top: 1.25rem;
+		font-size: 0.875rem;
+		font-weight: 500;
+		color: var(--color-accent) !important;
+		text-decoration: none;
+	}
+
+	.featured-read-more:hover {
+		text-decoration: underline;
+	}
+
+	/* Posts Grid */
+	.posts-section {
+		padding: 2rem 0 3rem;
+	}
+
+	.posts-container {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.posts-container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.posts-container {
+			padding: 0 2rem;
+		}
+	}
+
+	.section-title {
+		font-size: 1.875rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-bottom: 2rem;
+	}
+
+	@media (min-width: 640px) {
+		.section-title {
+			font-size: 2.25rem;
+		}
+	}
+
+	.posts-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.posts-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.posts-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+
+	/* CTA Banner */
+	.cta-section {
+		padding: 2rem 0 4rem;
+	}
+
+	.cta-container {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 0 1rem;
+	}
+
+	@media (min-width: 640px) {
+		.cta-container {
+			padding: 0 1.5rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.cta-container {
+			padding: 0 2rem;
+		}
+	}
+
+	.cta-banner {
+		padding: 2.5rem 1.5rem;
+		background: white;
+		border-radius: var(--radius-lg);
+		border: 1px solid var(--color-border-subtle);
+		box-shadow: var(--shadow-sm);
+		text-align: center;
+	}
+
+	.cta-banner-title {
+		font-size: 1.125rem;
+		font-weight: 700;
+		color: var(--color-text);
+		margin-bottom: 0.5rem;
+	}
+
+	.cta-banner-text {
+		font-size: 1rem;
+		color: var(--color-text-secondary);
+		margin-bottom: 1.25rem;
+	}
+
+	/* Empty State */
+	.empty-state {
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		gap: 0.75rem;
+		text-align: center;
+		padding: 5rem 1.5rem;
+		max-width: 400px;
+		margin: 0 auto;
+	}
+
+	.empty-state h2 {
+		font-size: 1.5rem;
+		font-weight: 600;
+	}
+
+	.empty-state p {
+		color: var(--color-muted);
+	}
+</style>

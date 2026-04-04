@@ -1,0 +1,125 @@
+---
+import { getEmDashCollection, getEntryTerms } from "emdash";
+import Base from "../../layouts/Base.astro";
+import PostCard from "../../components/PostCard.astro";
+import { getReadingTime } from "../../utils/reading-time";
+
+const { entries: posts, cacheHint } = await getEmDashCollection("posts");
+
+Astro.cache.set(cacheHint);
+
+const sortedPosts = posts.toSorted((a, b) => {
+	const dateA = a.data.publishedAt?.getTime() ?? 0;
+	const dateB = b.data.publishedAt?.getTime() ?? 0;
+	return dateB - dateA;
+});
+
+// Fetch tags for each post
+const postsWithTags = await Promise.all(
+	sortedPosts.map(async (post) => {
+		const tags = await getEntryTerms("posts", post.data.id, "tag");
+		const bylines = post.data.bylines ?? [];
+		return { post, tags, bylines };
+	})
+);
+---
+
+<Base title="All Posts" description="Browse all blog posts">
+	<div class="posts-page">
+		<header class="page-header">
+			<h1 class="page-title">All Posts</h1>
+			<p class="page-description">
+				{posts.length}
+				{posts.length === 1 ? "article" : "articles"} published
+			</p>
+		</header>
+
+		{
+			sortedPosts.length === 0 ? (
+				<p class="empty">No posts yet.</p>
+			) : (
+				<div class="posts-grid">
+					{postsWithTags.map(({ post, tags, bylines }) => (
+						<PostCard
+							title={post.data.title ?? "Untitled"}
+							excerpt={post.data.excerpt}
+							featuredImage={post.data.featured_image}
+							href={`/posts/${post.id}`}
+							date={post.data.publishedAt ?? undefined}
+							readingTime={getReadingTime(post.data.content)}
+							tags={tags.map((t) => ({ slug: t.slug, label: t.label }))}
+							bylines={bylines}
+						/>
+					))}
+				</div>
+			)
+		}
+	</div>
+</Base>
+
+<style>
+	.posts-page {
+		max-width: var(--wide-width);
+		margin: 0 auto;
+		padding: 3rem 1rem 4rem;
+	}
+
+	@media (min-width: 640px) {
+		.posts-page {
+			padding: 3rem 1.5rem 4rem;
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.posts-page {
+			padding: 3rem 2rem 4rem;
+		}
+	}
+
+	.page-header {
+		margin-bottom: 2.5rem;
+		text-align: center;
+	}
+
+	.page-title {
+		font-size: 2.25rem;
+		font-weight: 800;
+		color: var(--color-text);
+		margin-bottom: 0.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.page-title {
+			font-size: 3rem;
+		}
+	}
+
+	.page-description {
+		font-size: 1.125rem;
+		color: var(--color-muted);
+	}
+
+	.empty {
+		color: var(--color-muted);
+		font-size: 1.125rem;
+		text-align: center;
+	}
+
+	.posts-grid {
+		display: grid;
+		grid-template-columns: 1fr;
+		gap: 1.5rem;
+	}
+
+	@media (min-width: 640px) {
+		.posts-grid {
+			grid-template-columns: repeat(2, 1fr);
+		}
+	}
+
+	@media (min-width: 1024px) {
+		.posts-grid {
+			grid-template-columns: repeat(3, 1fr);
+		}
+	}
+</style>
