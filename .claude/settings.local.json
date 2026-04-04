@@ -5,7 +5,11 @@
       "Bash(git remote:*)",
       "Bash(git add:*)",
       "Bash(git rm:*)",
-      "Bash(rm -rf nice-catalogs-blog/.git)"
+      "Bash(rm -rf nice-catalogs-blog/.git)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "Bash(git pull:*)",
+      "Bash(git stash:*)"
     ]
   }
 }
