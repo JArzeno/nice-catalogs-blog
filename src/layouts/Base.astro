@@ -36,11 +36,12 @@ const {
 	author,
 	content,
 } = Astro.props;
-const siteTitle = "My Blog";
+const siteTitle = "Nice Catalogs";
 // If title already includes site title (from getSeoMeta), use as-is
 const fullTitle = title.includes(siteTitle) ? title : `${title} — ${siteTitle}`;
 
 // Fetch primary menu defined in seed
+const base = "/blog";
 const menu = await getMenu("primary");
 
 // Fetch pages for footer
@@ -71,51 +72,49 @@ const isLoggedIn = !!Astro.locals.user;
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700&family=JetBrains+Mono:wght@400;500&display=swap"
-			rel="stylesheet"
-		/>
+		<!-- System font stack — no external fonts -->
 		<title>{fullTitle}</title>
 		<EmDashHead page={pageCtx} />
-		<script is:inline>
-			// Apply theme immediately to prevent flash
-			(function () {
-				var c = document.cookie;
-				var i = c.indexOf("theme=");
-				var theme = i >= 0 ? c.slice(i + 6).split(";")[0] : null;
-				if (theme === "dark" || theme === "light") {
-					document.documentElement.classList.add(theme);
-				} else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-					document.documentElement.classList.add("dark");
-				}
-			})();
-		</script>
+		<!-- Light mode only -->
 	</head>
 	<body>
 		<EmDashBodyStart page={pageCtx} />
 		<header class="site-header">
-			<nav class="nav">
-				<a href="/" class="site-title">{siteTitle}</a>
+			<div class="nav">
+				<!-- Logo -->
+				<a href="/" class="site-logo">
+					<div class="logo-icon">
+						<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+							<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+							<path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+							<path d="M2 7h20" />
+							<path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
+						</svg>
+					</div>
+					<span class="logo-text">Nice Catalogs</span>
+				</a>
+
+				<!-- Desktop nav -->
+				<nav class="nav-links">
+					<a href="/#how-it-works">How it Works</a>
+					<a href="/#features">Features</a>
+					<a href="/#pricing">Pricing</a>
+					<a href={base} class="nav-active">Blog</a>
+				</nav>
+
+				<!-- Right side -->
 				<div class="nav-right">
 					<LiveSearch
-						placeholder="Search..."
+						placeholder="Search blog..."
 						class="site-search"
 						inputClass="site-search-input"
 						resultsClass="site-search-results"
 						resultClass="site-search-result"
 						collections={["posts", "pages"]}
 					/>
-					<div class="nav-links">
-						{
-							menu?.items.map((item) => (
-								<a href={item.url} target={item.target}>
-									{item.label}
-								</a>
-							))
-						}
-					</div>
+					<a href="/auth" class="nav-signin">Sign In</a>
+					<a href="/signup" class="nav-cta">Get Started</a>
 					{
 						isLoggedIn && (
 							<a href="/_emdash/admin" class="nav-admin">
@@ -124,7 +123,7 @@ const isLoggedIn = !!Astro.locals.user;
 						)
 					}
 				</div>
-			</nav>
+			</div>
 		</header>
 
 		<main>
@@ -134,201 +133,64 @@ const isLoggedIn = !!Astro.locals.user;
 		<footer class="site-footer">
 			<div class="footer-inner">
 				<div class="footer-grid">
+					<!-- Brand column -->
 					<div class="footer-brand">
-						<a href="/" class="footer-logo">{siteTitle}</a>
-						<p class="footer-tagline">Thoughts, stories, and ideas.</p>
+						<a href="/" class="footer-logo">
+							<div class="footer-logo-icon">
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+									<path d="m2 7 4.41-4.41A2 2 0 0 1 7.83 2h8.34a2 2 0 0 1 1.42.59L22 7" />
+									<path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+									<path d="M15 22v-4a2 2 0 0 0-2-2h-2a2 2 0 0 0-2 2v4" />
+									<path d="M2 7h20" />
+									<path d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7" />
+								</svg>
+							</div>
+							<span class="footer-logo-text">Nice Catalogs</span>
+						</a>
+						<p class="footer-tagline">Create beautiful digital catalogs for your business. Share your products and services with a simple link or QR code.</p>
 					</div>
+
+					<!-- Product -->
 					<div class="footer-nav">
-						<h4 class="footer-heading">Navigate</h4>
+						<h4 class="footer-heading">Product</h4>
 						<ul class="footer-links">
-							<li><a href="/">Home</a></li>
-							<li><a href="/posts">All Posts</a></li>
-							{
-								pages.slice(0, 3).map((page) => (
-									<li>
-										<a href={`/pages/${page.data.slug || page.id}`}>
-											{page.data.title}
-										</a>
-									</li>
-								))
-							}
+							<li><a href="/#how-it-works">How it Works</a></li>
+							<li><a href="/#features">Features</a></li>
+							<li><a href="/#pricing">Pricing</a></li>
+							<li><a href={base}>Blog</a></li>
 						</ul>
 					</div>
+
+					<!-- Industries -->
 					<div class="footer-nav">
-						<h4 class="footer-heading">Connect</h4>
+						<h4 class="footer-heading">Industries</h4>
 						<ul class="footer-links">
-							{
-								menu?.items.map((item) => (
-									<li>
-										<a
-											href={item.url}
-											target={item.target}
-											rel={
-												item.target === "_blank"
-													? "noopener noreferrer"
-													: undefined
-											}
-										>
-											{item.label}
-										</a>
-									</li>
-								))
-							}
-							<li><a href="/rss.xml">RSS Feed</a></li>
+							<li><a href="/for-restaurants">Restaurants</a></li>
+							<li><a href="/for-cafes">Cafes</a></li>
+							<li><a href="/for-bars">Bars</a></li>
+							<li><a href="/for-hotels">Hotels</a></li>
+							<li><a href="/for-salons">Salons</a></li>
+							<li><a href="/for-spas">Spas</a></li>
 						</ul>
 					</div>
-					<div class="footer-widgets-section">
-						<WidgetArea name="footer" />
+
+					<!-- Legal -->
+					<div class="footer-nav">
+						<h4 class="footer-heading">Legal</h4>
+						<ul class="footer-links">
+							<li><a href="/privacy-policy">Privacy Policy</a></li>
+							<li><a href="/terms-of-use">Terms of Use</a></li>
+							<li><a href="/accessibility">Accessibility</a></li>
+						</ul>
 					</div>
 				</div>
 				<div class="footer-bottom">
-					<p class="footer-copyright">
-						Powered by <a href="https://emdashcms.com">EmDash</a>
-					</p>
-					<div class="theme-switcher">
-						<button
-							type="button"
-							class="theme-btn"
-							data-theme="light"
-							aria-label="Light mode"
-						>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><circle cx="12" cy="12" r="5"></circle><line
-									x1="12"
-									y1="1"
-									x2="12"
-									y2="3"></line><line x1="12" y1="21" x2="12" y2="23"
-								></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"
-								></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"
-								></line><line x1="1" y1="12" x2="3" y2="12"></line><line
-									x1="21"
-									y1="12"
-									x2="23"
-									y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"
-								></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"
-								></line></svg
-							>
-						</button>
-						<button
-							type="button"
-							class="theme-btn"
-							data-theme="dark"
-							aria-label="Dark mode"
-						>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"
-								></path></svg
-							>
-						</button>
-						<button
-							type="button"
-							class="theme-btn"
-							data-theme="system"
-							aria-label="System theme"
-						>
-							<svg
-								width="16"
-								height="16"
-								viewBox="0 0 24 24"
-								fill="none"
-								stroke="currentColor"
-								stroke-width="2"
-								stroke-linecap="round"
-								stroke-linejoin="round"
-								><rect x="2" y="3" width="20" height="14" rx="2" ry="2"
-								></rect><line x1="8" y1="21" x2="16" y2="21"></line><line
-									x1="12"
-									y1="17"
-									x2="12"
-									y2="21"></line></svg
-							>
-						</button>
-					</div>
+					<p class="footer-copyright">&copy; 2026 Nice Catalogs. All rights reserved.</p>
 				</div>
 			</div>
 		</footer>
 
-		<script>
-			// Theme switcher
-			const THEME_REGEX = /theme=([^;]+)/;
-			const themeBtns =
-				document.querySelectorAll<HTMLButtonElement>(".theme-btn");
-			const root = document.documentElement;
-
-			function setCookie(
-				name: string,
-				value: string,
-				maxAge: number = 31536000
-			) {
-				const secure = location.protocol === "https:" ? "; Secure" : "";
-				if (value === "") {
-					document.cookie = `${name}=; path=/; max-age=0; SameSite=Lax${secure}`;
-				} else {
-					document.cookie = `${name}=${value}; path=/; max-age=${maxAge}; SameSite=Lax${secure}`;
-				}
-			}
-
-			function setTheme(theme: string) {
-				if (theme === "system") {
-					setCookie("theme", "");
-					root.classList.remove("light", "dark");
-					if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-						root.classList.add("dark");
-					}
-				} else {
-					setCookie("theme", theme);
-					root.classList.remove("light", "dark");
-					root.classList.add(theme);
-				}
-				updateActiveBtn(theme);
-			}
-
-			function updateActiveBtn(theme: string) {
-				themeBtns.forEach((btn) => {
-					btn.classList.toggle("active", btn.dataset.theme === theme);
-				});
-			}
-
-			function getStoredTheme(): string {
-				const match = document.cookie.match(THEME_REGEX);
-				return match ? match[1] : "system";
-			}
-
-			// Initialize
-			const storedTheme = getStoredTheme();
-			setTheme(storedTheme);
-
-			themeBtns.forEach((btn) => {
-				btn.addEventListener("click", () => {
-					setTheme(btn.dataset.theme || "system");
-				});
-			});
-
-			// Listen for system preference changes
-			window
-				.matchMedia("(prefers-color-scheme: dark)")
-				.addEventListener("change", (e) => {
-					if (getStoredTheme() === "system") {
-						root.classList.toggle("dark", e.matches);
-					}
-				});
-		</script>
+		<!-- Light mode only -->
 
 		<style is:global>
 			*:where(:not([class*="emdash"]):not([class*="ec-"])),
@@ -360,23 +222,7 @@ const isLoggedIn = !!Astro.locals.user;
 			}
 
 			:root {
-				/* Colors - Light mode (default) */
-				--color-bg: #ffffff;
-				--color-bg-subtle: #fafafa;
-				--color-text: #1a1a1a;
-				--color-text-secondary: #525252;
-				--color-muted: #8b8b8b;
-				--color-border: #e5e5e5;
-				--color-border-subtle: #f0f0f0;
-				--color-surface: #f7f7f7;
-				--color-accent: #0066cc;
-				--color-accent-hover: #0052a3;
-				--color-on-accent: white;
-				--color-accent-ring: color-mix(
-					in srgb,
-					var(--color-accent) 25%,
-					transparent
-				);
+				/* Colors & fonts defined in theme.css */
 
 				/* EmDash search theming */
 				--emdash-search-bg: var(--color-bg);
@@ -385,13 +231,6 @@ const isLoggedIn = !!Astro.locals.user;
 				--emdash-search-border: var(--color-border);
 				--emdash-search-hover: var(--color-surface);
 				--emdash-search-highlight: var(--color-text);
-
-				/* Typography */
-				--font-sans:
-					"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-					sans-serif;
-				--font-mono:
-					"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
 				/* Type scale - more refined */
 				--font-size-xs: 0.8125rem;
@@ -474,35 +313,7 @@ const isLoggedIn = !!Astro.locals.user;
 				--shadow-btn-active: 0 1px 2px rgba(0, 0, 0, 0.05);
 			}
 
-			/* Dark mode via system preference (when no explicit class) */
-			@media (prefers-color-scheme: dark) {
-				:root:not(.light) {
-					--color-bg: #0d0d0d;
-					--color-bg-subtle: #141414;
-					--color-text: #ededed;
-					--color-text-secondary: #a0a0a0;
-					--color-muted: #6b6b6b;
-					--color-border: #2a2a2a;
-					--color-border-subtle: #1f1f1f;
-					--color-surface: #181818;
-					--color-accent: #4d9fff;
-					--color-accent-hover: #6eb0ff;
-				}
-			}
-
-			/* Explicit dark mode */
-			:root.dark {
-				--color-bg: #0d0d0d;
-				--color-bg-subtle: #141414;
-				--color-text: #ededed;
-				--color-text-secondary: #a0a0a0;
-				--color-muted: #6b6b6b;
-				--color-border: #2a2a2a;
-				--color-border-subtle: #1f1f1f;
-				--color-surface: #181818;
-				--color-accent: #4d9fff;
-				--color-accent-hover: #6eb0ff;
-			}
+			/* Dark mode disabled — light mode only */
 
 			html {
 				scroll-behavior: smooth;
@@ -560,13 +371,13 @@ const isLoggedIn = !!Astro.locals.user;
 
 		<style>
 			.site-header {
-				position: sticky;
+				position: fixed;
 				top: 0;
+				left: 0;
+				right: 0;
 				z-index: 100;
-				background: color-mix(in srgb, var(--color-bg) 65%, transparent);
-				backdrop-filter: blur(12px);
-				-webkit-backdrop-filter: blur(12px);
-				border-bottom: 1px solid var(--color-border-subtle);
+				background: white;
+				box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -2px rgba(0, 0, 0, 0.1);
 			}
 
 			.nav {
@@ -575,42 +386,108 @@ const isLoggedIn = !!Astro.locals.user;
 				align-items: center;
 				max-width: var(--wide-width);
 				margin: 0 auto;
-				padding: var(--spacing-4) var(--spacing-6);
+				padding: 0 var(--spacing-6);
 				height: var(--nav-height);
 			}
 
-			.site-title {
-				font-size: var(--font-size-lg);
-				font-weight: 600;
-				color: var(--color-text);
+			/* Logo */
+			.site-logo {
+				display: flex;
+				align-items: center;
+				gap: var(--spacing-2);
 				text-decoration: none;
-				letter-spacing: var(--tracking-snug);
 			}
 
-			.site-title:hover {
-				color: var(--color-accent);
+			.logo-icon {
+				width: 40px;
+				height: 40px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: var(--radius);
+				background: var(--color-accent);
+				color: white;
+				transition: background var(--transition-fast);
+			}
+
+			.site-logo:hover .logo-icon {
+				background: var(--color-accent-hover);
+			}
+
+			.logo-text {
+				font-size: var(--font-size-xl);
+				font-weight: 700;
+				color: var(--color-text);
 			}
 
 			.nav-right {
 				display: flex;
 				align-items: center;
-				gap: var(--spacing-6);
+				gap: var(--spacing-4);
 			}
 
 			.nav-links {
-				display: flex;
-				gap: var(--spacing-5);
-				font-size: var(--font-size-sm);
+				display: none;
+				align-items: center;
+				gap: var(--spacing-8);
+			}
+
+			@media (min-width: 768px) {
+				.nav-links {
+					display: flex;
+				}
 			}
 
 			.nav-links a {
 				text-decoration: none;
-				color: var(--color-text);
+				color: var(--color-text-secondary);
+				font-weight: 500;
 				transition: color var(--transition-fast);
 			}
 
-			.nav-links a:hover {
-				color: var(--color-accent);
+			.nav-links a:hover,
+			.nav-links a.nav-active {
+				color: var(--color-text);
+			}
+
+			.nav-signin {
+				display: none;
+				color: var(--color-text);
+				font-weight: 500;
+				text-decoration: none;
+				transition: color var(--transition-fast);
+			}
+
+			.nav-signin:hover {
+				color: var(--color-text);
+			}
+
+			@media (min-width: 768px) {
+				.nav-signin {
+					display: block;
+				}
+			}
+
+			.nav-cta {
+				display: none;
+				padding: var(--spacing-2) var(--spacing-4);
+				background: var(--color-accent);
+				color: white;
+				border-radius: 6px;
+				font-weight: 600;
+				text-decoration: none;
+				transition: background var(--transition-fast);
+			}
+
+			.nav-cta:hover {
+				background: var(--color-accent-hover);
+				color: white;
+			}
+
+			@media (min-width: 768px) {
+				.nav-cta {
+					display: block;
+				}
 			}
 
 			.nav-admin {
@@ -623,6 +500,11 @@ const isLoggedIn = !!Astro.locals.user;
 
 			.nav-admin:hover {
 				opacity: 1;
+			}
+
+			/* Header spacer */
+			main {
+				margin-top: var(--nav-height);
 			}
 
 			/* Search styling */
@@ -728,43 +610,55 @@ const isLoggedIn = !!Astro.locals.user;
 				color: var(--color-text);
 			}
 
-			main {
-				min-height: calc(100vh - var(--nav-height) - 300px);
-			}
-
 			/* Footer */
 			.site-footer {
-				background: var(--color-bg-subtle);
-				border-top: 1px solid var(--color-border-subtle);
+				background: white;
+				border-top: 1px solid var(--color-border);
 			}
 
 			.footer-inner {
 				max-width: var(--wide-width);
 				margin: 0 auto;
-				padding: var(--spacing-16) var(--spacing-6) var(--spacing-8);
+				padding: var(--spacing-12) var(--spacing-6);
 			}
 
 			.footer-grid {
 				display: grid;
 				grid-template-columns: 2fr 1fr 1fr 1fr;
-				gap: var(--spacing-12);
-				margin-bottom: var(--spacing-12);
+				gap: var(--spacing-8);
+				margin-bottom: var(--spacing-10);
 			}
 
 			.footer-brand {
-				max-width: 280px;
+				max-width: 320px;
 			}
 
 			.footer-logo {
-				font-size: var(--font-size-lg);
-				font-weight: 600;
-				color: var(--color-text);
+				display: flex;
+				align-items: center;
+				gap: var(--spacing-2);
 				text-decoration: none;
-				letter-spacing: var(--tracking-snug);
+				margin-bottom: var(--spacing-4);
+			}
+
+			.footer-logo-icon {
+				width: 36px;
+				height: 36px;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				border-radius: var(--radius);
+				background: var(--color-accent);
+				color: white;
+			}
+
+			.footer-logo-text {
+				font-size: var(--font-size-lg);
+				font-weight: 700;
+				color: var(--color-text);
 			}
 
 			.footer-tagline {
-				margin-top: var(--spacing-3);
 				font-size: var(--font-size-sm);
 				color: var(--color-muted);
 				line-height: var(--leading-relaxed);
@@ -775,11 +669,11 @@ const isLoggedIn = !!Astro.locals.user;
 			}
 
 			.footer-heading {
-				font-size: var(--font-size-xs);
-				font-weight: 500;
+				font-size: var(--font-size-sm);
+				font-weight: 600;
 				text-transform: uppercase;
 				letter-spacing: var(--tracking-wider);
-				color: var(--color-muted);
+				color: var(--color-text);
 				margin-bottom: var(--spacing-4);
 			}
 
@@ -788,11 +682,11 @@ const isLoggedIn = !!Astro.locals.user;
 			}
 
 			.footer-links li {
-				margin-bottom: var(--spacing-2);
+				margin-bottom: var(--spacing-3);
 			}
 
 			.footer-links a {
-				color: var(--color-text-secondary);
+				color: var(--color-muted);
 				text-decoration: none;
 				font-size: var(--font-size-sm);
 				transition: color var(--transition-fast);
@@ -802,82 +696,25 @@ const isLoggedIn = !!Astro.locals.user;
 				color: var(--color-text);
 			}
 
-			.footer-widgets-section :global(.widget-area) {
-				display: block;
-			}
-
-			.footer-widgets-section :global(.widget) {
-				color: var(--color-text-secondary);
-			}
-
-			.footer-widgets-section :global(.widget__title) {
-				font-size: var(--font-size-xs);
-				font-weight: 500;
-				text-transform: uppercase;
-				letter-spacing: var(--tracking-wider);
-				color: var(--color-muted);
-				margin-bottom: var(--spacing-4);
-			}
-
-			.footer-widgets-section :global(.widget__content) {
-				color: var(--color-text-secondary);
-				font-size: var(--font-size-sm);
-				line-height: var(--leading-relaxed);
-			}
-
 			.footer-bottom {
 				display: flex;
-				justify-content: space-between;
+				flex-direction: column;
 				align-items: center;
-				padding-top: var(--spacing-6);
+				gap: var(--spacing-4);
+				padding-top: var(--spacing-8);
 				border-top: 1px solid var(--color-border);
+			}
+
+			@media (min-width: 640px) {
+				.footer-bottom {
+					flex-direction: row;
+					justify-content: space-between;
+				}
 			}
 
 			.footer-copyright {
 				font-size: var(--font-size-sm);
-				color: var(--color-muted);
-			}
-
-			.footer-copyright a {
-				color: var(--color-text-secondary);
-			}
-
-			/* Theme switcher */
-			.theme-switcher {
-				display: flex;
-				gap: var(--spacing-1);
-				padding: var(--spacing-1);
-				background: var(--color-surface);
-				border-radius: var(--radius);
-			}
-
-			.theme-btn {
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				width: 32px;
-				height: 28px;
-				background: transparent;
-				border: none;
-				color: var(--color-muted);
-				border-radius: var(--radius);
-				cursor: pointer;
-				transition: all var(--transition-fast);
-			}
-
-			.theme-btn:hover {
-				color: var(--color-text-secondary);
-			}
-
-			.theme-btn.active {
-				background: var(--color-bg);
-				color: var(--color-text);
-				box-shadow: var(--shadow-btn-active);
-			}
-
-			.theme-btn svg {
-				width: 16px;
-				height: 16px;
+				color: var(--color-muted-light, #9ca3af);
 			}
 
 			@media (max-width: 900px) {
@@ -893,75 +730,12 @@ const isLoggedIn = !!Astro.locals.user;
 			}
 
 			@media (max-width: 640px) {
-				.site-header {
-					position: relative;
-					border-bottom: none;
-				}
-
-				.nav {
-					flex-direction: row;
-					flex-wrap: wrap;
-					justify-content: space-between;
-					align-items: center;
-					height: auto;
-					gap: var(--spacing-2);
-					padding: var(--spacing-3) var(--spacing-4);
-				}
-
-				.site-title {
-					font-size: var(--font-size-base);
-				}
-
-				.nav-right {
-					display: contents;
-				}
-
-				.site-search {
-					order: 0;
-					max-width: 140px;
-				}
-
-				:global(.site-search-input) {
-					width: 140px !important;
-					padding: var(--spacing-1) var(--spacing-2) !important;
-					font-size: var(--font-size-sm) !important;
-				}
-
-				.nav-links {
-					order: 1;
-					width: 100%;
-					display: flex;
-					column-gap: var(--spacing-3);
-					row-gap: var(--spacing-1);
-					flex-wrap: wrap;
-					justify-content: flex-start;
-				}
-
-				.nav-admin {
-					order: 2;
-					position: absolute;
-					right: var(--spacing-4);
-					top: var(--spacing-3);
-					font-size: var(--font-size-xs);
-				}
-
 				.footer-grid {
 					grid-template-columns: 1fr;
 				}
 
 				.footer-brand {
 					grid-column: span 1;
-				}
-
-				.footer-bottom {
-					flex-direction: column;
-					gap: var(--spacing-4);
-					text-align: center;
-				}
-
-				.footer-controls {
-					flex-wrap: wrap;
-					justify-content: center;
 				}
 			}
 		</style>

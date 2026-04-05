@@ -16,16 +16,17 @@ import Base from "../../layouts/Base.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getReadingTime } from "../../utils/reading-time";
 
+const base = "/blog";
 const { slug } = Astro.params;
 
 if (!slug) {
-	return Astro.redirect("/404");
+	return Astro.redirect(`${base}/404`);
 }
 
 const { entry: post, cacheHint } = await getEmDashEntry("posts", slug);
 
 if (!post) {
-	return Astro.redirect("/404");
+	return Astro.redirect(`${base}/404`);
 }
 
 Astro.cache.set(cacheHint);
@@ -170,7 +171,7 @@ const publishDate =
 								<span class="meta-label">Tags</span>
 								<div class="meta-tags">
 									{tags.map((t) => (
-										<a href={`/tag/${t.slug}`} class="meta-tag">
+										<a href={`${base}/tag/${t.slug}`} class="meta-tag">
 											{t.label}
 										</a>
 									))}
@@ -257,7 +258,7 @@ const publishDate =
 									title={p.data.title}
 									excerpt={p.data.excerpt}
 									featuredImage={p.data.featured_image}
-									href={`/posts/${p.id}`}
+									href={`${base}/posts/${p.id}`}
 									date={p.data.publishedAt ?? undefined}
 									readingTime={getReadingTime(p.data.content)}
 									tags={postTags.map((t) => ({ slug: t.slug, label: t.label }))}
@@ -366,7 +367,8 @@ const publishDate =
 		gap: var(--spacing-10);
 		justify-content: center;
 		padding: 0 var(--spacing-6);
-		margin: var(--spacing-16) 0;
+		padding-top: var(--spacing-6);
+		margin-bottom: var(--spacing-16);
 	}
 
 	/* Left column: Meta */
@@ -485,7 +487,7 @@ const publishDate =
 	}
 
 	.article-title {
-		font-size: clamp(2rem, 5vw, var(--font-size-5xl));
+		font-size: clamp(1.5rem, 3vw, var(--font-size-2xl));
 		font-weight: 700;
 		line-height: var(--leading-tight);
 		letter-spacing: var(--tracking-tight);
@@ -493,7 +495,7 @@ const publishDate =
 	}
 
 	.article-excerpt {
-		font-size: var(--font-size-xl);
+		font-size: var(--font-size-base);
 		line-height: var(--leading-relaxed);
 		color: var(--color-text-secondary);
 	}
@@ -948,7 +950,7 @@ const publishDate =
 
 	@media (max-width: 600px) {
 		.article-title {
-			font-size: var(--font-size-3xl);
+			font-size: var(--font-size-xl);
 		}
 
 		.more-grid {

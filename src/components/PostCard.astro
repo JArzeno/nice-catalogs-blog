@@ -97,7 +97,7 @@ const formattedDate = date
 		tags && tags.length > 0 && (
 			<div class="card-tags">
 				{tags.slice(0, 2).map((tag) => (
-					<a href={`/tag/${tag.slug}`} class="card-tag">
+					<a href={`/blog/tag/${tag.slug}`} class="card-tag">
 						{tag.label}
 					</a>
 				))}
@@ -110,6 +110,18 @@ const formattedDate = date
 	.post-card {
 		display: flex;
 		flex-direction: column;
+		background: white;
+		border-radius: var(--radius-lg);
+		overflow: hidden;
+		border: 1px solid var(--color-border);
+		box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+		transition: all 0.3s ease;
+	}
+
+	.post-card:hover {
+		box-shadow: var(--shadow-xl, 0 20px 25px -5px rgba(0,0,0,0.1));
+		border-color: var(--color-border-subtle);
+		transform: translateY(-2px);
 	}
 
 	.card-link {
@@ -121,9 +133,7 @@ const formattedDate = date
 	.card-image {
 		aspect-ratio: 16 / 10;
 		overflow: hidden;
-		border-radius: var(--radius-lg);
 		background: var(--color-surface);
-		margin-bottom: var(--spacing-4);
 	}
 
 	.card-image img {
@@ -139,29 +149,29 @@ const formattedDate = date
 
 	.card-placeholder {
 		aspect-ratio: 16 / 10;
-		border-radius: var(--radius-lg);
 		background: var(--color-surface);
-		margin-bottom: var(--spacing-4);
 	}
 
 	.card-body {
 		flex: 1;
+		padding: var(--spacing-6);
 	}
 
 	.card-meta {
 		display: flex;
 		align-items: center;
 		flex-wrap: wrap;
-		column-gap: var(--spacing-2);
+		column-gap: var(--spacing-3);
 		row-gap: 0;
 		font-size: var(--font-size-sm);
-		color: var(--color-muted);
-		margin-bottom: var(--spacing-2);
+		margin-bottom: var(--spacing-3);
 	}
 
 	.card-meta time,
 	.card-meta span:not(.meta-dot) {
 		white-space: nowrap;
+		color: var(--color-muted-light, #9ca3af);
+		font-size: var(--font-size-xs);
 	}
 
 	.meta-dot {
@@ -173,19 +183,14 @@ const formattedDate = date
 
 	.card-title {
 		font-size: var(--font-size-xl);
-		font-weight: 600;
+		font-weight: 700;
 		line-height: var(--leading-snug);
-		letter-spacing: var(--tracking-snug);
+		color: var(--color-text);
 		margin-bottom: var(--spacing-2);
-		transition: color var(--transition-fast);
-	}
-
-	.card-link:hover .card-title {
-		color: var(--color-accent);
 	}
 
 	.card-excerpt {
-		font-size: var(--font-size-base);
+		font-size: var(--font-size-sm);
 		line-height: var(--leading-relaxed);
 		color: var(--color-text-secondary);
 		display: -webkit-box;
@@ -198,25 +203,25 @@ const formattedDate = date
 		display: flex;
 		flex-wrap: wrap;
 		gap: var(--spacing-2);
-		margin-top: var(--spacing-3);
+		padding: 0 var(--spacing-6) var(--spacing-4);
 	}
 
 	.card-tag {
-		display: inline-block;
-		padding: var(--tag-padding-y) var(--spacing-2);
-		font-size: var(--font-size-xs);
-		color: var(--color-muted);
-		background: var(--color-surface);
-		border-radius: var(--radius);
+		display: inline-flex;
+		align-items: center;
+		padding: var(--spacing-1) var(--spacing-3);
+		font-size: var(--font-size-sm);
+		font-weight: 500;
+		color: var(--color-accent);
+		background: var(--color-accent-bg, #fef2f2);
+		border-radius: 9999px;
 		text-decoration: none;
-		transition:
-			color var(--transition-fast),
-			background var(--transition-fast);
+		transition: all var(--transition-fast);
 	}
 
 	.card-tag:hover {
-		color: var(--color-text);
-		background: var(--color-border);
+		color: var(--color-accent-hover);
+		background: #fee2e2;
 	}
 
 	/* Byline styles */

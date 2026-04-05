@@ -23,6 +23,7 @@ function matchesQuery(post: (typeof allPosts)[0], q: string): boolean {
 	);
 }
 
+const base = "/blog";
 const results = query ? allPosts.filter((p) => matchesQuery(p, query)) : [];
 ---
 
@@ -33,7 +34,7 @@ const results = query ? allPosts.filter((p) => matchesQuery(p, query)) : [];
 	<section class="search-page">
 		<h1 class="search-title">Search</h1>
 
-		<form method="get" action="/search" class="search-form">
+		<form method="get" action={`${base}/search`} class="search-form">
 			<input
 				type="search"
 				name="q"
@@ -63,7 +64,7 @@ const results = query ? allPosts.filter((p) => matchesQuery(p, query)) : [];
 							title={post.data.title}
 							excerpt={post.data.excerpt}
 							featuredImage={post.data.featured_image}
-							href={`/posts/${post.id}`}
+							href={`${base}/posts/${post.id}`}
 							date={post.data.publishedAt ?? undefined}
 							readingTime={getReadingTime(post.data.content)}
 						/>

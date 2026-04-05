@@ -7,8 +7,9 @@ import { getReadingTime } from "../../utils/reading-time";
 const { slug } = Astro.params;
 const term = slug ? await getTerm("tag", slug) : null;
 
+const base = "/blog";
 if (!term) {
-	return Astro.redirect("/404");
+	return Astro.redirect(`${base}/404`);
 }
 
 const { entries: posts } = await getEmDashCollection("posts", {
@@ -49,7 +50,7 @@ const filteredPosts = await Promise.all(
 							title={post.data.title}
 							excerpt={post.data.excerpt}
 							featuredImage={post.data.featured_image}
-							href={`/posts/${post.id}`}
+							href={`${base}/posts/${post.id}`}
 							date={post.data.publishedAt ?? undefined}
 							readingTime={getReadingTime(post.data.content)}
 							tags={tags.map((t) => ({ slug: t.slug, label: t.label }))}

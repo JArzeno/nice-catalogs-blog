@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "astro dev",
-		"build": "astro build",
+		"build": "astro build && mkdir -p dist/client/blog && cp -r dist/client/_astro dist/client/blog/_astro",
 		"preview": "astro preview",
 		"deploy": "wrangler deploy",
 		"typecheck": "astro check" 
