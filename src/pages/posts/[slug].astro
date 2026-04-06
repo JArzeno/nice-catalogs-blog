@@ -487,10 +487,11 @@ const publishDate =
 	}
 
 	.article-title {
-		font-size: clamp(0.95rem, 1.75vw, 1.25rem);
+		font-size: clamp(1.75rem, 3vw, 2.25rem);
 		font-weight: 700;
 		line-height: var(--leading-tight);
 		letter-spacing: var(--tracking-tight);
+		margin-top: var(--spacing-6);
 		margin-bottom: var(--spacing-4);
 	}
 
@@ -950,7 +951,7 @@ const publishDate =
 
 	@media (max-width: 600px) {
 		.article-title {
-			font-size: var(--font-size-base);
+			font-size: var(--font-size-xl);
 		}
 
 		.more-grid {
