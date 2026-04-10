@@ -76,6 +76,15 @@ const isLoggedIn = !!Astro.locals.user;
 		<title>{fullTitle}</title>
 		<EmDashHead page={pageCtx} />
 		<!-- Light mode only -->
+		<!-- Google tag (gtag.js) -->
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" type="590bd37e92e74d0fb3f8ee52-text/javascript"></script>
+		<script type="590bd37e92e74d0fb3f8ee52-text/javascript">
+			window.dataLayer = window.dataLayer || [];
+			function gtag(){dataLayer.push(arguments);}
+			gtag('js', new Date());
+			gtag('config', 'G-WPYL7C12J5');
+			gtag('config', 'AW-18030378630');
+		</script>
 	</head>
 	<body>
 		<EmDashBodyStart page={pageCtx} />
