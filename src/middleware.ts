@@ -23,8 +23,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		if (contentType.includes("text/html")) {
 			const html = await response.text();
 			const rewritten = html
-				.replaceAll('="/_astro/', '="/blog/_astro/')
-				.replaceAll('="/_emdash/', '="/blog/_emdash/');
+				.replaceAll('/_astro/', '/blog/_astro/')
+				.replaceAll('/_emdash/', '/blog/_emdash/')
+				.replaceAll('/_image?', '/blog/_image?');
 			return new Response(rewritten, {
 				status: response.status,
 				statusText: response.statusText,
