@@ -7,6 +7,7 @@ import emdash from "emdash/astro";
 
 export default defineConfig({
 	output: "server",
+	base: "/blog",
 	adapter: cloudflare(),
 	image: {
 		layout: "constrained",
