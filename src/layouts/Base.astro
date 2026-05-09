@@ -144,7 +144,7 @@ const isLoggedIn = !!Astro.locals.user;
 					<a href="/signup" class="nav-cta">Get Started</a>
 					{
 						isLoggedIn && (
-							<a href="/_emdash/admin" class="nav-admin">
+							<a href={`${import.meta.env.BASE_URL}_emdash/admin`} class="nav-admin">
 								Admin
 							</a>
 						)

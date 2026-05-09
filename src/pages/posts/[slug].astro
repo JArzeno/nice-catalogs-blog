@@ -48,7 +48,7 @@ function getImageUrl(img: unknown): string | undefined {
 		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
 		(typeof image.id === "string" ? image.id : undefined);
 	if (storageKey) {
-		return `${Astro.url.origin}/_emdash/api/media/file/${storageKey}`;
+		return `${Astro.url.origin}${import.meta.env.BASE_URL}_emdash/api/media/file/${storageKey}`;
 	}
 	return undefined;
 }
@@ -134,7 +134,7 @@ const publishDate =
 										<div class="byline">
 											{credit.byline.avatarMediaId && (
 												<img
-													src={`/_emdash/api/media/file/${credit.byline.avatarMediaId}`}
+													src={`${import.meta.env.BASE_URL}_emdash/api/media/file/${credit.byline.avatarMediaId}`}
 													alt={credit.byline.displayName}
 													class="byline-avatar"
 												/>
