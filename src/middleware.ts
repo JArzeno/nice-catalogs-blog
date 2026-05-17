@@ -1,4 +1,5 @@
 import { defineMiddleware } from "astro:middleware";
+import { env } from "cloudflare:workers";
 
 // Matches /_emdash/api/media/file/<key> with optional /blog prefix.
 const MEDIA_FILE_RE = /^(?:\/blog)?\/_emdash\/api\/media\/file\/(.+)$/;
@@ -20,9 +21,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	if (mediaMatch) {
 		const key = mediaMatch[1];
-		// Access R2 binding directly via Cloudflare adapter runtime env.
-		const env = (context.locals as { runtime?: { env?: { MEDIA?: R2Bucket } } }).runtime?.env;
-		const bucket = env?.MEDIA;
+		// Use cloudflare:workers env directly — same pattern as EmDash's own R2 storage.
+		const bucket = (env as unknown as { MEDIA?: R2Bucket }).MEDIA;
 
 		if (!bucket) {
 			return new Response(JSON.stringify({ error: { code: "NOT_CONFIGURED", message: "Storage not configured" } }), {
