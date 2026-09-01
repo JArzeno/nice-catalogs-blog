@@ -4,3 +4,6 @@ dist
 uploads
 data.db
 .wrangler
+data.db-shm
+data.db-wal
+.emdash

@@ -1,4 +1,6 @@
 import { defineMiddleware } from "astro:middleware";
+// Astro 6 removed Astro.locals.runtime.env; bindings now come from this module.
+import { env } from "cloudflare:workers";
 
 // Matches /_emdash/api/media/file/<key> with optional /blog prefix.
 const MEDIA_FILE_RE = /^(?:\/blog)?\/_emdash\/api\/media\/file\/(.+)$/;
@@ -20,9 +22,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 
 	if (mediaMatch) {
 		const key = mediaMatch[1];
-		// Access R2 binding directly via Cloudflare adapter runtime env.
-		const env = (context.locals as { runtime?: { env?: { MEDIA?: R2Bucket } } }).runtime?.env;
-		const bucket = env?.MEDIA;
+		// Access the R2 binding directly from the Workers runtime env.
+		const bucket = env.MEDIA;
 
 		if (!bucket) {
 			return new Response(JSON.stringify({ error: { code: "NOT_CONFIGURED", message: "Storage not configured" } }), {
