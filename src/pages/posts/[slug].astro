@@ -11,9 +11,9 @@ import {
 	PortableText,
 	Comments,
 	CommentForm,
-	WidgetArea,
 } from "emdash/ui";
 import Base from "../../layouts/Base.astro";
+import BlogWidgetArea from "../../components/BlogWidgetArea.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getReadingTime } from "../../utils/reading-time";
 import { BLOG_URL } from "../../utils/site";
@@ -242,7 +242,7 @@ const publishDate =
 						</div>
 					</nav>
 					<div class="sidebar-widgets">
-						<WidgetArea name="sidebar" />
+						<BlogWidgetArea name="sidebar" />
 					</div>
 				</div>
 			</aside>

@@ -16,6 +16,11 @@ export function absoluteUrl(path = "/"): string {
 	return `${BLOG_URL}${clean && !clean.startsWith("/") ? `/${clean}` : clean}`;
 }
 
+/** Root-relative blog path, e.g. blogPath("/tag/news") -> "/blog/tag/news". */
+export function blogPath(path = "/"): string {
+	return `${import.meta.env.BASE_URL.replace(TRAILING_SLASH_RE, "")}${path}`;
+}
+
 /**
  * Canonical URL for the current request. Astro's `url.pathname` already
  * includes the `base`, so only the origin comes from `site`.

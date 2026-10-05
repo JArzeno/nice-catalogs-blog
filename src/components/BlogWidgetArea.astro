@@ -1,0 +1,162 @@
+---
+/**
+ * Widget area renderer that keeps links under the Astro `base` ("/blog").
+ *
+ * EmDash's built-in WidgetArea hardcodes root-relative links in its core
+ * widgets (/posts/..., /category/..., /tag/..., /search), which miss the
+ * /blog route. Same markup and classes as the upstream widgets.
+ */
+import {
+	getEmDashCollection,
+	getMenu,
+	getTaxonomyTerms,
+	getWidgetArea,
+	sanitizeHref,
+} from "emdash";
+import { PortableText } from "emdash/ui";
+import { blogPath } from "../utils/site";
+
+interface Props {
+	name: string;
+}
+
+const { name } = Astro.props;
+const area = await getWidgetArea(name);
+
+const widgets = await Promise.all(
+	(area?.widgets ?? []).map(async (widget) => {
+		const props = widget.componentProps ?? {};
+		const showCount = (fallback: boolean) =>
+			typeof props.showCount === "boolean" ? props.showCount : fallback;
+
+		const menu =
+			widget.type === "menu" && widget.menuName ? await getMenu(widget.menuName) : null;
+
+		let categories = null;
+		if (widget.componentId === "core:categories") {
+			categories = await getTaxonomyTerms("category", { includeCounts: showCount(true) });
+		}
+
+		let tags = null;
+		if (widget.componentId === "core:tags") {
+			const limit = typeof props.limit === "number" ? props.limit : 20;
+			const allTags = await getTaxonomyTerms("tag", { includeCounts: showCount(false) });
+			tags = allTags.slice(0, limit);
+		}
+
+		let recentPosts = null;
+		if (widget.componentId === "core:recent-posts") {
+			const count = typeof props.count === "number" ? props.count : 5;
+			({ entries: recentPosts } = await getEmDashCollection("posts", {
+				limit: count,
+				orderBy: { published_at: "desc" },
+			}));
+		}
+
+		return { widget, menu, categories, tags, recentPosts, showCount };
+	}),
+);
+---
+
+{
+	area && widgets.length > 0 && (
+		<div class="widget-area" data-widget-area={name}>
+			{widgets.map(({ widget, menu, categories, tags, recentPosts, showCount }) => (
+				<div class="widget" data-widget-id={widget.id} data-widget-type={widget.type}>
+					{widget.title && <h3 class="widget__title">{widget.title}</h3>}
+					<div class="widget__content">
+						{widget.type === "content" && widget.content && (
+							<PortableText value={widget.content} />
+						)}
+
+						{menu && (
+							<nav class="widget__menu">
+								<ul>
+									{menu.items.map((item) => (
+										<li>
+											<a href={sanitizeHref(item.url)} title={item.titleAttr || undefined}>
+												{item.label}
+											</a>
+										</li>
+									))}
+								</ul>
+							</nav>
+						)}
+
+						{widget.componentId === "core:search" && (
+							<form method="get" action={blogPath("/search")} class="widget-search">
+								<input
+									type="search"
+									name="q"
+									placeholder={
+										typeof widget.componentProps?.placeholder === "string"
+											? widget.componentProps.placeholder
+											: "Search..."
+									}
+									aria-label="Search"
+									class="widget-search__input"
+								/>
+								<button type="submit" class="widget-search__button">Search</button>
+							</form>
+						)}
+
+						{categories && (
+							<ul class="widget-categories">
+								{categories.length > 0 ? (
+									categories.map((category) => (
+										<li>
+											<a
+												href={blogPath(`/category/${category.slug}`)}
+												class="widget-categories__link"
+											>
+												{category.label}
+											</a>
+											{showCount(true) && category.count !== undefined && (
+												<span class="widget-categories__count">({category.count})</span>
+											)}
+										</li>
+									))
+								) : (
+									<li class="widget-categories__empty">No categories yet</li>
+								)}
+							</ul>
+						)}
+
+						{tags && (
+							<div class="widget-tags">
+								{tags.length > 0 ? (
+									<ul class="widget-tags__cloud">
+										{tags.map((tag) => (
+											<li>
+												<a href={blogPath(`/tag/${tag.slug}`)} class="widget-tags__link">
+													{tag.label}
+												</a>
+												{showCount(false) && tag.count !== undefined && (
+													<span class="widget-tags__count">({tag.count})</span>
+												)}
+											</li>
+										))}
+									</ul>
+								) : (
+									<p class="widget-tags__empty">No tags yet</p>
+								)}
+							</div>
+						)}
+
+						{recentPosts && (
+							<ul class="widget-recent-posts">
+								{recentPosts.map((post) => (
+									<li>
+										<a href={blogPath(`/posts/${post.id}`)} class="widget-recent-posts__link">
+											{post.data.title}
+										</a>
+									</li>
+								))}
+							</ul>
+						)}
+					</div>
+				</div>
+			))}
+		</div>
+	)
+}
