@@ -7,6 +7,7 @@ import emdash from "emdash/astro";
 
 export default defineConfig({
 	output: "server",
+	site: "https://nicecatalogs.com",
 	base: "/blog",
 	adapter: cloudflare(),
 	image: {

@@ -1,11 +1,9 @@
 import type { APIRoute } from "astro";
 import { getEmDashCollection } from "emdash";
-
-const SITE_ORIGIN = "https://nicecatalogs.com";
-const BLOG_BASE = "/blog";
+import { BLOG_URL } from "../utils/site";
 
 export const GET: APIRoute = async () => {
-	const baseUrl = `${SITE_ORIGIN}${BLOG_BASE}`;
+	const baseUrl = BLOG_URL;
 
 	const [{ entries: posts }, { entries: pages }] = await Promise.all([
 		getEmDashCollection("posts", {
