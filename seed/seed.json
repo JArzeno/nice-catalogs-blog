@@ -45,10 +45,9 @@
 				},
 				{
 					"slug": "language",
-					"label": "Language",
+					"label": "Language (auto-detected if empty)",
 					"type": "select",
 					"required": false,
-					"defaultValue": "en",
 					"options": [
 						{ "value": "en", "label": "English" },
 						{ "value": "es", "label": "Spanish" }
@@ -56,30 +55,32 @@
 				},
 				{
 					"slug": "translation_of",
-					"label": "Translation of",
+					"label": "Translation of (post slug)",
 					"type": "reference",
-					"collection": "posts",
-					"required": false
+					"required": false,
+					"options": { "collection": "posts" }
 				},
 				{
 					"slug": "faq",
 					"label": "FAQ",
 					"type": "repeater",
 					"required": false,
-					"fields": [
-						{
-							"slug": "question",
-							"label": "Question",
-							"type": "string",
-							"required": true
-						},
-						{
-							"slug": "answer",
-							"label": "Answer",
-							"type": "text",
-							"required": true
-						}
-					]
+					"validation": {
+						"subFields": [
+							{
+								"slug": "question",
+								"label": "Question",
+								"type": "string",
+								"required": true
+							},
+							{
+								"slug": "answer",
+								"label": "Answer",
+								"type": "text",
+								"required": true
+							}
+						]
+					}
 				}
 			]
 		},

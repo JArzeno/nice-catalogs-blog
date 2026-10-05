@@ -41,7 +41,7 @@ const formattedDate = date
 				<div class="card-image">
 					<Image 
 						image={featuredImage} 
-						alt={featuredImage?.alt || title}
+						alt={(typeof featuredImage === "object" && featuredImage.alt) || title}
 					/>
 				</div>
 			) : (

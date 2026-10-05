@@ -4,8 +4,8 @@ import {
 	getEmDashCollection,
 	getEntryTerms,
 	getSeoMeta,
-	getSiteSettings,
 } from "emdash";
+import { safeJsonLdSerialize } from "emdash/page";
 import {
 	Image,
 	PortableText,
@@ -16,7 +16,8 @@ import Base from "../../layouts/Base.astro";
 import BlogWidgetArea from "../../components/BlogWidgetArea.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getReadingTime } from "../../utils/reading-time";
-import { BLOG_URL, SITE_ORIGIN, absoluteUrl, blogPath, DEFAULT_OG_IMAGE } from "../../utils/site";
+import { LANGUAGES, postLanguage } from "../../utils/language";
+import { BLOG_URL, absoluteMediaUrl, absoluteUrl, blogPath } from "../../utils/site";
 
 const base = "/blog";
 const { slug } = Astro.params;
@@ -33,83 +34,82 @@ if (!post) {
 
 Astro.cache.set(cacheHint);
 
-// Get featured image URL for OG image
+// Absolute URL of the featured image, used as the og:image fallback
 function getImageUrl(img: unknown): string | undefined {
 	if (!img || typeof img !== "object") return undefined;
 	const image = img as Record<string, unknown>;
-	// Check for direct src
-	if (typeof image.src === "string" && image.src) {
-		return image.src.startsWith("http") ? image.src : new URL(image.src, SITE_ORIGIN).href;
-	}
-	// Build from storageKey for local images (use absoluteUrl helper)
+	const fromSrc = typeof image.src === "string" ? absoluteMediaUrl(image.src) : null;
+	if (fromSrc) return fromSrc;
+	// Build from storageKey for local images
 	const meta = image.meta as Record<string, unknown> | undefined;
 	const storageKey =
 		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
 		(typeof image.id === "string" ? image.id : undefined);
-	if (storageKey) {
-		return absoluteUrl(`/_emdash/api/media/file/${storageKey}`);
-	}
-	return undefined;
+	return storageKey ? absoluteUrl(`/_emdash/api/media/file/${storageKey}`) : undefined;
 }
-const featuredImageUrl = getImageUrl(post.data.featured_image);
-const ogImage = featuredImageUrl || DEFAULT_OG_IMAGE;
 
-// Build title manually to avoid appending long tagline
-const BRAND = "Nice Catalogs";
-const rawTitle = (post.data.seo?.title || post.data.title).trim();
-const pageTitle = /nice catalogs/i.test(rawTitle) ? rawTitle : `${rawTitle} | ${BRAND}`;
-
-// Generate SEO meta from content
-const settings = await getSiteSettings();
+// SEO panel values win; og:image falls back to the featured image here and
+// to the site default in Base. No siteTitle, so seo.title is the bare title
+// and Base adds the brand.
 const seo = getSeoMeta(post, {
-	siteTitle: BRAND,
 	siteUrl: BLOG_URL,
 	path: `/posts/${slug}`,
-	defaultOgImage: ogImage,
+	defaultOgImage: getImageUrl(post.data.featured_image),
 });
 
-// Get tags for this post
+const lang = postLanguage(post.data);
+
+// The linked translation, in either direction: this post's `translation_of`,
+// or a post whose `translation_of` points here (by ID or slug).
+async function findTranslation() {
+	const target = post.data.translation_of;
+	if (target && target !== post.data.id && target !== slug) {
+		const { entry } = await getEmDashEntry("posts", target);
+		if (entry) return entry;
+	}
+	const { entries } = await getEmDashCollection("posts", {
+		where: { translation_of: [post.data.id, slug] },
+		limit: 1,
+	});
+	return entries[0] ?? null;
+}
+
+// Get tags, the translation and recent posts in parallel.
 // Note: post.id is the slug, post.data.id is the database ULID
-const tags = await getEntryTerms("posts", post.data.id, "tag");
+const [tags, translation, { entries: recentPosts }] = await Promise.all([
+	getEntryTerms("posts", post.data.id, "tag"),
+	findTranslation(),
+	// Fetch a few extra in case the current post is among them
+	getEmDashCollection("posts", {
+		orderBy: { published_at: "desc" },
+		limit: 4,
+	}),
+]);
+
+// Reciprocal hreflang: only for an indexable post whose translation is a
+// different post in the other language. x-default is the English version.
+const translationLang = translation ? postLanguage(translation.data) : null;
+const alternates =
+	translation && translationLang && translationLang !== lang && translation.id !== post.id && !seo.robots
+		? [
+				{ hreflang: lang, href: absoluteUrl(`/posts/${slug}`) },
+				{ hreflang: translationLang, href: absoluteUrl(`/posts/${translation.id}`) },
+				{
+					hreflang: "x-default",
+					href: absoluteUrl(`/posts/${lang === "en" ? slug : translation.id}`),
+				},
+			]
+		: [];
 
 // Bylines are already hydrated by getEmDashEntry
 const bylines = post.data.bylines ?? [];
-
-// Get language (default to "en", with text-based Spanish detection fallback)
-function detectLanguageFromText(title: string, excerpt?: string): string {
-	const text = `${title} ${excerpt || ''}`.toLowerCase();
-	
-	// Spanish-specific characters
-	const hasSpanishChars = /[áéíóúñ¿¡]/.test(text);
-	
-	// Spanish stopwords (need at least 2 matches)
-	const spanishStopwords = ['para', 'cómo', 'como', 'de la', 'el ', 'los ', 'las ', 'con ', 'sin ', ' tu ', 'por '];
-	const stopwordMatches = spanishStopwords.filter(word => text.includes(word)).length;
-	
-	// Mark as Spanish if it has accented chars OR at least 2 stopwords
-	if (hasSpanishChars || stopwordMatches >= 2) {
-		return 'es';
-	}
-	
-	return 'en';
-}
-
-const explicitLang = post.data.language as string | undefined;
-const lang = explicitLang || detectLanguageFromText(post.data.title, post.data.excerpt);
+const authorName = bylines[0]?.byline?.displayName || "Julio Arzeno";
 
 // Get reading time
 const readingTime = getReadingTime(post.data.content);
 
-// Get translation relationship for hreflang
-const translationOf = post.data.translation_of as { id: string; slug: string } | null | undefined;
-let translatedPost: typeof post | null = null;
-if (translationOf?.slug) {
-	const result = await getEmDashEntry("posts", translationOf.slug);
-	translatedPost = result.entry || null;
-}
-
 // Get FAQ items if present
-const faqItems = (post.data.faq as Array<{ question: string; answer: string }> | undefined) ?? [];
+const faqItems = (post.data.faq ?? []).filter((item) => item?.question && item?.answer);
 
 // UI strings by language
 const uiStrings = {
@@ -130,14 +130,8 @@ const uiStrings = {
 		onThisPage: "En esta página",
 	},
 };
-const ui = uiStrings[lang as keyof typeof uiStrings] || uiStrings.en;
+const ui = uiStrings[lang];
 
-// Get other posts for "More posts" section, with their tags
-// Fetch a few extra in case the current post is among them
-const { entries: recentPosts } = await getEmDashCollection("posts", {
-	orderBy: { published_at: "desc" },
-	limit: 4,
-});
 const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
 // Fetch tags for related posts (bylines are already hydrated by getEmDashCollection)
@@ -150,53 +144,14 @@ const otherPostsWithTags = await Promise.all(
 );
 
 const publishDate =
-	post.data.publishedAt?.toLocaleDateString(lang === "es" ? "es-DO" : "en-US", {
+	post.data.publishedAt?.toLocaleDateString(LANGUAGES[lang].dateLocale, {
 		year: "numeric",
 		month: "long",
 		day: "numeric",
 	}) ?? null;
 
-// JSON-LD for BlogPosting
-const authorName = (bylines.length > 0 && bylines[0]?.byline?.displayName) 
-	? bylines[0].byline.displayName 
-	: "Julio Arzeno";
-
-// Headline is the bare post title (max 110 chars, no suffix)
-const headline = post.data.title.length <= 110 
-	? post.data.title 
-	: post.data.title.substring(0, 107) + "...";
-
-const jsonLd = {
-	"@context": "https://schema.org",
-	"@type": "BlogPosting",
-	headline,
-	description: seo.description || post.data.excerpt || "",
-	image: ogImage ? [ogImage] : [],
-	datePublished: post.data.publishedAt?.toISOString() ?? "",
-	dateModified: post.data.updatedAt?.toISOString() ?? "",
-	inLanguage: lang,
-	author: {
-		"@type": "Person",
-		name: authorName,
-		url: SITE_ORIGIN,
-	},
-	publisher: {
-		"@type": "Organization",
-		"@id": `${SITE_ORIGIN}/#organization`,
-		name: "Nice Catalogs",
-		url: SITE_ORIGIN,
-		logo: {
-			"@type": "ImageObject",
-			url: `${SITE_ORIGIN}/logo.png`,
-		},
-	},
-	mainEntityOfPage: {
-		"@type": "WebPage",
-		"@id": absoluteUrl(`/posts/${slug}`),
-	},
-};
-
-// FAQPage JSON-LD (only if FAQ items exist)
+// FAQPage JSON-LD (only if FAQ items exist). BlogPosting comes from the
+// blog-seo plugin via EmDashHead.
 const faqJsonLd = faqItems.length > 0 ? {
 	"@context": "https://schema.org",
 	"@type": "FAQPage",
@@ -212,32 +167,32 @@ const faqJsonLd = faqItems.length > 0 ? {
 ---
 
 <Base
-	title={pageTitle}
+	title={seo.title}
+	pageTitle={seo.title}
 	description={seo.description}
-	image={ogImage}
+	image={seo.ogImage}
 	canonical={seo.canonical}
 	robots={seo.robots}
 	type="article"
 	publishedTime={post.data.publishedAt?.toISOString() ?? null}
 	modifiedTime={post.data.updatedAt.toISOString()}
+	author={authorName}
 	lang={lang}
 	content={{ collection: "posts", id: post.data.id, slug }}
 >
-	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} slot="head" />
-	{faqJsonLd && <script type="application/ld+json" set:html={JSON.stringify(faqJsonLd)} slot="head" />}
-	{translatedPost && (
-		<>
-			<link rel="alternate" hreflang={lang} href={absoluteUrl(`/posts/${slug}`)} slot="head" />
-			<link rel="alternate" hreflang={translatedPost.data.language as string || "en"} href={absoluteUrl(`/posts/${translatedPost.id}`)} slot="head" />
-			<link rel="alternate" hreflang="x-default" href={absoluteUrl(`/posts/${lang === "en" ? slug : translatedPost.id}`)} slot="head" />
-		</>
-	)}
+	<Fragment slot="head">
+		{faqJsonLd && <script type="application/ld+json" set:html={safeJsonLdSerialize(faqJsonLd)} />}
+		{alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+	</Fragment>
 	<article class="article">
 		{/* Hero: Full-width featured image */}
 		{
 			post.data.featured_image && (
 				<div class="article-hero" {...post.edit.featured_image}>
-					<Image image={post.data.featured_image} />
+					<Image
+						image={post.data.featured_image}
+						alt={post.data.featured_image?.alt || post.data.title}
+					/>
 				</div>
 			)
 		}

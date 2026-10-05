@@ -4,6 +4,15 @@ import { env } from "cloudflare:workers";
 
 // Matches /_emdash/api/media/file/<key> with optional /blog prefix.
 const MEDIA_FILE_RE = /^(?:\/blog)?\/_emdash\/api\/media\/file\/(.+)$/;
+// EmDash admin and API routes, with or without the /blog prefix.
+const EMDASH_ROUTE_RE = /^(?:\/blog)?\/_emdash(?:\/|$)/;
+const REPEATED_SLASHES_RE = /\/{2,}/g;
+const TRAILING_SLASHES_RE = /\/+$/;
+const NO_STORE_RE = /private|no-store/i;
+
+// How long anonymous HTML stays in the edge cache. Nothing purges the cache
+// on publish yet, so this is also the longest an edit takes to show up.
+const HTML_CACHE_TTL_SECONDS = 60;
 
 // EmDash has two bugs when Astro's base: "/blog" is set:
 //
@@ -19,19 +28,13 @@ const MEDIA_FILE_RE = /^(?:\/blog)?\/_emdash\/api\/media\/file\/(.+)$/;
 export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 	const { pathname } = url;
+	const isGet = context.request.method === "GET";
 
-	// Normalize trailing slashes: redirect /blog/ to /blog
-	// Only for GET requests on public HTML routes (skip admin, API, assets)
-	if (
-		context.request.method === "GET" &&
-		pathname.endsWith("/") &&
-		pathname !== "/" &&
-		!pathname.includes("/_emdash/") &&
-		!pathname.includes("/admin") &&
-		!/\.[a-z0-9]+$/i.test(pathname) // Skip paths with file extensions
-	) {
-		const newPath = pathname.replace(/\/+$/, "");
-		return Response.redirect(new URL(newPath + url.search, url.origin), 301);
+	// Normalize trailing slashes: redirect /blog/ to /blog. Repeated slashes are
+	// collapsed so a path like "//evil.com/" can't become an off-site redirect.
+	if (isGet && pathname.length > 1 && pathname.endsWith("/") && !EMDASH_ROUTE_RE.test(pathname)) {
+		const target = pathname.replace(REPEATED_SLASHES_RE, "/").replace(TRAILING_SLASHES_RE, "") || "/";
+		return Response.redirect(new URL(target + url.search, url.origin), 301);
 	}
 
 	const mediaMatch = MEDIA_FILE_RE.exec(pathname);
@@ -67,6 +70,26 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		});
 	}
 
+	// Edge-cache public pages for anonymous visitors (Workers Cache API).
+	// Logged-in users (EmDash's auth middleware has already set locals.user),
+	// admin/API routes and any URL with a query string (search, preview and
+	// edit links) always render fresh and are never stored.
+	const cache =
+		!import.meta.env.DEV &&
+		isGet &&
+		!url.search &&
+		!EMDASH_ROUTE_RE.test(pathname) &&
+		!context.locals.user
+			? // The DOM lib typing of `caches` (used by astro check) lacks Workers' `default` cache.
+				(caches as unknown as { default: Cache }).default
+			: null;
+	const cacheKey = new Request(url.toString());
+
+	if (cache) {
+		const cached = await cache.match(cacheKey);
+		if (cached) return cached;
+	}
+
 	const response = await next();
 
 	const contentType = response.headers.get("content-type") ?? "";
@@ -81,19 +104,22 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		"/blog/_emdash/api/media/file/",
 	);
 
-	// Add cache headers for public content (skip admin and auth pages)
-	const headers = new Headers(response.headers);
-	const isPublic = !pathname.includes("/_emdash/") && !pathname.includes("/admin");
-	const hasAuthCookie = context.request.headers.get("cookie")?.includes("astro-session");
-	const settingCookie = response.headers.has("set-cookie");
-	
-	if (isPublic && !hasAuthCookie && !settingCookie && context.request.method === "GET") {
-		headers.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
-	}
-
-	return new Response(rewritten, {
+	const result = new Response(rewritten, {
 		status: response.status,
 		statusText: response.statusText,
-		headers,
+		headers: response.headers,
 	});
+
+	// Only store successful pages that are the same for every visitor.
+	if (
+		cache &&
+		response.status === 200 &&
+		!response.headers.has("set-cookie") &&
+		!NO_STORE_RE.test(response.headers.get("cache-control") ?? "")
+	) {
+		result.headers.set("Cache-Control", `public, max-age=0, s-maxage=${HTML_CACHE_TTL_SECONDS}`);
+		context.locals.cfContext.waitUntil(cache.put(cacheKey, result.clone()));
+	}
+
+	return result;
 });

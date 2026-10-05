@@ -2,7 +2,7 @@
 import { getEmDashCollection, getEntryTerms } from "emdash";
 import Base from "../../layouts/Base.astro";
 import { getReadingTime } from "../../utils/reading-time";
-import { blogPath, DEFAULT_OG_IMAGE } from "../../utils/site";
+import { blogPath } from "../../utils/site";
 
 const { entries: posts, cacheHint } = await getEmDashCollection("posts");
 
@@ -33,9 +33,8 @@ const formatDate = (date: Date) =>
 ---
 
 <Base 
-	title="All Guides: Digital Catalogs, QR Menus & WhatsApp Orders" 
-	description="Complete guides on creating digital catalogs, QR code menus, WhatsApp ordering systems, and online product sharing for restaurants, cafes, salons, and small businesses."
-	image={DEFAULT_OG_IMAGE}
+	title="All Guides: Catalogs, QR Menus & WhatsApp | Nice Catalogs" 
+	description="Complete guides on digital catalogs, QR code menus, WhatsApp ordering and sharing products online for restaurants, cafes, salons and small businesses."
 >
 	<div class="posts-page">
 		<header class="page-header">

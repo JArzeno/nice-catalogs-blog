@@ -3,7 +3,6 @@ import { getTerm, getEmDashCollection, getEntryTerms } from "emdash";
 import Base from "../../layouts/Base.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getReadingTime } from "../../utils/reading-time";
-import { DEFAULT_OG_IMAGE } from "../../utils/site";
 
 const { slug } = Astro.params;
 const term = slug ? await getTerm("category", slug) : null;
@@ -13,10 +12,12 @@ if (!term) {
 	return Astro.redirect(`${base}/404`);
 }
 
-const { entries: posts } = await getEmDashCollection("posts", {
+const { entries: posts, cacheHint } = await getEmDashCollection("posts", {
 	where: { category: term.slug },
 	orderBy: { published_at: "desc" },
 });
+
+Astro.cache.set(cacheHint);
 
 // Fetch tags and bylines for display on each post card
 const filteredPosts = await Promise.all(
@@ -31,7 +32,6 @@ const filteredPosts = await Promise.all(
 <Base 
 	title={`${term.label} | Nice Catalogs`} 
 	description={`${filteredPosts.length} post${filteredPosts.length === 1 ? "" : "s"} in ${term.label}.`}
-	image={DEFAULT_OG_IMAGE}
 >
 	<section class="archive-section">
 		<header class="archive-header">

@@ -27,6 +27,8 @@ export interface Post {
   content?: PortableTextBlock[];
   excerpt?: string;
   language?: string;
+  translation_of?: string;
+  faq?: { "question": string; "answer": string }[];
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;

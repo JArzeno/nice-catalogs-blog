@@ -4,7 +4,7 @@ import { Image } from "emdash/ui";
 import Base from "../layouts/Base.astro";
 import PostCard from "../components/PostCard.astro";
 import { getReadingTime } from "../utils/reading-time";
-import { blogPath, DEFAULT_OG_IMAGE } from "../utils/site";
+import { blogPath } from "../utils/site";
 
 const { entries: posts, cacheHint } = await getEmDashCollection("posts");
 
@@ -63,14 +63,13 @@ function formatDate(date: Date | null | undefined) {
 <Base 
 	title="Digital Menu, QR & WhatsApp Catalog Guides | Nice Catalogs" 
 	description="Guides for small businesses: build a digital catalog or QR menu, take orders on WhatsApp, and share products with a link. In English and Spanish."
-	image={DEFAULT_OG_IMAGE}
 >
 	{
 		posts.length === 0 ? (
 			<section class="empty-state">
 				<h2>No posts yet</h2>
 				<p>Create your first post in the admin panel.</p>
-				<a href={`${import.meta.env.BASE_URL}_emdash/admin/content/posts/new`} class="btn">
+				<a href={blogPath("/_emdash/admin/content/posts/new")} class="btn">
 					Create a post
 				</a>
 			</section>
