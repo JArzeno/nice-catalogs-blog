@@ -79,6 +79,7 @@ const isLoggedIn = !!Astro.locals.user;
 		<title>{fullTitle}</title>
 		<meta property="og:locale" content={lang === "es" ? "es_419" : "en_US"} />
 		<EmDashHead page={pageCtx} />
+		<slot name="head" />
 		<!-- Light mode only -->
 		<!-- Google tag (gtag.js) -->
 		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" data-cfasync="false"></script>
