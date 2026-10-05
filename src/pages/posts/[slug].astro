@@ -81,6 +81,17 @@ const lang = (post.data.language as string | undefined) ?? "en";
 // Get reading time
 const readingTime = getReadingTime(post.data.content);
 
+// Get translation relationship for hreflang
+const translationOf = post.data.translation_of as { id: string; slug: string } | null | undefined;
+let translatedPost: typeof post | null = null;
+if (translationOf?.slug) {
+	const result = await getEmDashEntry("posts", translationOf.slug);
+	translatedPost = result.entry || null;
+}
+
+// Get FAQ items if present
+const faqItems = (post.data.faq as Array<{ question: string; answer: string }> | undefined) ?? [];
+
 // UI strings by language
 const uiStrings = {
 	en: {
@@ -157,6 +168,20 @@ const jsonLd = {
 		"@id": absoluteUrl(`/posts/${slug}`),
 	},
 };
+
+// FAQPage JSON-LD (only if FAQ items exist)
+const faqJsonLd = faqItems.length > 0 ? {
+	"@context": "https://schema.org",
+	"@type": "FAQPage",
+	mainEntity: faqItems.map(item => ({
+		"@type": "Question",
+		name: item.question,
+		acceptedAnswer: {
+			"@type": "Answer",
+			text: item.answer,
+		},
+	})),
+} : null;
 ---
 
 <Base
@@ -172,6 +197,14 @@ const jsonLd = {
 	content={{ collection: "posts", id: post.data.id, slug }}
 >
 	<script type="application/ld+json" set:html={JSON.stringify(jsonLd)} slot="head" />
+	{faqJsonLd && <script type="application/ld+json" set:html={JSON.stringify(faqJsonLd)} slot="head" />}
+	{translatedPost && (
+		<>
+			<link rel="alternate" hreflang={lang} href={absoluteUrl(`/posts/${slug}`)} slot="head" />
+			<link rel="alternate" hreflang={translatedPost.data.language as string || "en"} href={absoluteUrl(`/posts/${translatedPost.id}`)} slot="head" />
+			<link rel="alternate" hreflang="x-default" href={absoluteUrl(`/posts/${lang === "en" ? slug : translatedPost.id}`)} slot="head" />
+		</>
+	)}
 	<article class="article">
 		{/* Hero: Full-width featured image */}
 		{
@@ -286,6 +319,22 @@ const jsonLd = {
 				<div class="article-content">
 					<PortableText value={post.data.content} />
 				</div>
+
+				{
+					faqItems.length > 0 && (
+						<div class="article-faq">
+							<h2>{lang === "es" ? "Preguntas frecuentes" : "Frequently Asked Questions"}</h2>
+							<div class="faq-list">
+								{faqItems.map((item) => (
+									<div class="faq-item">
+										<h3 class="faq-question">{item.question}</h3>
+										<div class="faq-answer">{item.answer}</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)
+				}
 
 				<div class="article-comments">
 					<Comments collection="posts" contentId={post.data.id} threaded />
@@ -906,6 +955,46 @@ const jsonLd = {
 		background: var(--color-surface);
 		padding: var(--tag-padding-y) var(--spacing-2);
 		border-radius: var(--radius);
+	}
+
+	/* FAQ section */
+	.article-faq {
+		margin-top: var(--spacing-12);
+		padding-top: var(--spacing-10);
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-faq h2 {
+		font-size: var(--font-size-2xl);
+		font-weight: 600;
+		margin-bottom: var(--spacing-8);
+	}
+
+	.faq-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-6);
+	}
+
+	.faq-item {
+		padding: var(--spacing-6);
+		background: var(--color-bg-subtle);
+		border-radius: var(--radius-lg);
+		border-left: 3px solid var(--color-accent);
+	}
+
+	.faq-question {
+		font-size: var(--font-size-lg);
+		font-weight: 600;
+		color: var(--color-text);
+		margin-bottom: var(--spacing-3);
+	}
+
+	.faq-answer {
+		font-size: var(--font-size-base);
+		line-height: var(--leading-relaxed);
+		color: var(--color-text-secondary);
+		white-space: pre-wrap;
 	}
 
 	/* Comments section */

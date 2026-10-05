@@ -53,6 +53,33 @@
 						{ "value": "en", "label": "English" },
 						{ "value": "es", "label": "Spanish" }
 					]
+				},
+				{
+					"slug": "translation_of",
+					"label": "Translation of",
+					"type": "reference",
+					"collection": "posts",
+					"required": false
+				},
+				{
+					"slug": "faq",
+					"label": "FAQ",
+					"type": "repeater",
+					"required": false,
+					"fields": [
+						{
+							"slug": "question",
+							"label": "Question",
+							"type": "string",
+							"required": true
+						},
+						{
+							"slug": "answer",
+							"label": "Answer",
+							"type": "text",
+							"required": true
+						}
+					]
 				}
 			]
 		},
