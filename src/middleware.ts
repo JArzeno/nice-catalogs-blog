@@ -21,7 +21,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const { pathname } = url;
 
 	// Normalize trailing slashes: redirect /blog/ to /blog
-	if (pathname.endsWith("/") && pathname !== "/") {
+	// Only for GET requests on public HTML routes (skip admin, API, assets)
+	if (
+		context.request.method === "GET" &&
+		pathname.endsWith("/") &&
+		pathname !== "/" &&
+		!pathname.includes("/_emdash/") &&
+		!pathname.includes("/admin") &&
+		!/\.[a-z0-9]+$/i.test(pathname) // Skip paths with file extensions
+	) {
 		const newPath = pathname.replace(/\/+$/, "");
 		return Response.redirect(new URL(newPath + url.search, url.origin), 301);
 	}
@@ -76,9 +84,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	// Add cache headers for public content (skip admin and auth pages)
 	const headers = new Headers(response.headers);
 	const isPublic = !pathname.includes("/_emdash/") && !pathname.includes("/admin");
-	const hasAuthCookie = context.request.headers.get("cookie")?.includes("emdash-auth");
+	const hasAuthCookie = context.request.headers.get("cookie")?.includes("astro-session");
+	const settingCookie = response.headers.has("set-cookie");
 	
-	if (isPublic && !hasAuthCookie && context.request.method === "GET") {
+	if (isPublic && !hasAuthCookie && !settingCookie && context.request.method === "GET") {
 		headers.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
 	}
 
