@@ -4,8 +4,8 @@ import {
 	getEmDashCollection,
 	getEntryTerms,
 	getSeoMeta,
-	getSiteSettings,
 } from "emdash";
+import { safeJsonLdSerialize } from "emdash/page";
 import {
 	Image,
 	PortableText,
@@ -16,7 +16,8 @@ import Base from "../../layouts/Base.astro";
 import BlogWidgetArea from "../../components/BlogWidgetArea.astro";
 import PostCard from "../../components/PostCard.astro";
 import { getReadingTime } from "../../utils/reading-time";
-import { BLOG_URL } from "../../utils/site";
+import { LANGUAGES, postLanguage } from "../../utils/language";
+import { BLOG_URL, absoluteMediaUrl, absoluteUrl, blogPath } from "../../utils/site";
 
 const base = "/blog";
 const { slug } = Astro.params;
@@ -33,54 +34,104 @@ if (!post) {
 
 Astro.cache.set(cacheHint);
 
-// Get featured image URL for OG fallback
-// The image may have src (external) or meta.storageKey (local)
+// Absolute URL of the featured image, used as the og:image fallback
 function getImageUrl(img: unknown): string | undefined {
 	if (!img || typeof img !== "object") return undefined;
 	const image = img as Record<string, unknown>;
-	// Check for direct src
-	if (typeof image.src === "string" && image.src) {
-		return image.src.startsWith("http")
-			? image.src
-			: `${Astro.url.origin}${image.src}`;
-	}
+	const fromSrc = typeof image.src === "string" ? absoluteMediaUrl(image.src) : null;
+	if (fromSrc) return fromSrc;
 	// Build from storageKey for local images
 	const meta = image.meta as Record<string, unknown> | undefined;
 	const storageKey =
 		(typeof meta?.storageKey === "string" ? meta.storageKey : undefined) ||
 		(typeof image.id === "string" ? image.id : undefined);
-	if (storageKey) {
-		return `${Astro.url.origin}${import.meta.env.BASE_URL}_emdash/api/media/file/${storageKey}`;
-	}
-	return undefined;
+	return storageKey ? absoluteUrl(`/_emdash/api/media/file/${storageKey}`) : undefined;
 }
-const featuredImageUrl = getImageUrl(post.data.featured_image);
 
-// Generate SEO meta from content
-const settings = await getSiteSettings();
+// SEO panel values win; og:image falls back to the featured image here and
+// to the site default in Base. No siteTitle, so seo.title is the bare title
+// and Base adds the brand.
 const seo = getSeoMeta(post, {
-	siteTitle: settings.title || "Nice Catalogs Blog",
 	siteUrl: BLOG_URL,
 	path: `/posts/${slug}`,
-	defaultOgImage: featuredImageUrl,
+	defaultOgImage: getImageUrl(post.data.featured_image),
 });
 
-// Get tags for this post
+const lang = postLanguage(post.data);
+
+// The linked translation, in either direction: this post's `translation_of`,
+// or a post whose `translation_of` points here (by ID or slug).
+async function findTranslation() {
+	const target = post.data.translation_of;
+	if (target && target !== post.data.id && target !== slug) {
+		const { entry } = await getEmDashEntry("posts", target);
+		if (entry) return entry;
+	}
+	const { entries } = await getEmDashCollection("posts", {
+		where: { translation_of: [post.data.id, slug] },
+		limit: 1,
+	});
+	return entries[0] ?? null;
+}
+
+// Get tags, the translation and recent posts in parallel.
 // Note: post.id is the slug, post.data.id is the database ULID
-const tags = await getEntryTerms("posts", post.data.id, "tag");
+const [tags, translation, { entries: recentPosts }] = await Promise.all([
+	getEntryTerms("posts", post.data.id, "tag"),
+	findTranslation(),
+	// Fetch a few extra in case the current post is among them
+	getEmDashCollection("posts", {
+		orderBy: { published_at: "desc" },
+		limit: 4,
+	}),
+]);
+
+// Reciprocal hreflang: only for an indexable post whose translation is a
+// different post in the other language. x-default is the English version.
+const translationLang = translation ? postLanguage(translation.data) : null;
+const alternates =
+	translation && translationLang && translationLang !== lang && translation.id !== post.id && !seo.robots
+		? [
+				{ hreflang: lang, href: absoluteUrl(`/posts/${slug}`) },
+				{ hreflang: translationLang, href: absoluteUrl(`/posts/${translation.id}`) },
+				{
+					hreflang: "x-default",
+					href: absoluteUrl(`/posts/${lang === "en" ? slug : translation.id}`),
+				},
+			]
+		: [];
 
 // Bylines are already hydrated by getEmDashEntry
 const bylines = post.data.bylines ?? [];
+const authorName = bylines[0]?.byline?.displayName || "Julio Arzeno";
 
 // Get reading time
 const readingTime = getReadingTime(post.data.content);
 
-// Get other posts for "More posts" section, with their tags
-// Fetch a few extra in case the current post is among them
-const { entries: recentPosts } = await getEmDashCollection("posts", {
-	orderBy: { published_at: "desc" },
-	limit: 4,
-});
+// Get FAQ items if present
+const faqItems = (post.data.faq ?? []).filter((item) => item?.question && item?.answer);
+
+// UI strings by language
+const uiStrings = {
+	en: {
+		author: "Author",
+		authors: "Authors",
+		published: "Published",
+		readingTime: "min read",
+		continueReading: "Continue reading",
+		onThisPage: "On this page",
+	},
+	es: {
+		author: "Autor",
+		authors: "Autores",
+		published: "Publicado",
+		readingTime: "min de lectura",
+		continueReading: "Seguir leyendo",
+		onThisPage: "En esta página",
+	},
+};
+const ui = uiStrings[lang];
+
 const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
 // Fetch tags for related posts (bylines are already hydrated by getEmDashCollection)
@@ -93,15 +144,31 @@ const otherPostsWithTags = await Promise.all(
 );
 
 const publishDate =
-	post.data.publishedAt?.toLocaleDateString("en-US", {
+	post.data.publishedAt?.toLocaleDateString(LANGUAGES[lang].dateLocale, {
 		year: "numeric",
 		month: "long",
 		day: "numeric",
 	}) ?? null;
+
+// FAQPage JSON-LD (only if FAQ items exist). BlogPosting comes from the
+// blog-seo plugin via EmDashHead.
+const faqJsonLd = faqItems.length > 0 ? {
+	"@context": "https://schema.org",
+	"@type": "FAQPage",
+	mainEntity: faqItems.map(item => ({
+		"@type": "Question",
+		name: item.question,
+		acceptedAnswer: {
+			"@type": "Answer",
+			text: item.answer,
+		},
+	})),
+} : null;
 ---
 
 <Base
 	title={seo.title}
+	pageTitle={seo.title}
 	description={seo.description}
 	image={seo.ogImage}
 	canonical={seo.canonical}
@@ -109,14 +176,23 @@ const publishDate =
 	type="article"
 	publishedTime={post.data.publishedAt?.toISOString() ?? null}
 	modifiedTime={post.data.updatedAt.toISOString()}
+	author={authorName}
+	lang={lang}
 	content={{ collection: "posts", id: post.data.id, slug }}
 >
+	<Fragment slot="head">
+		{faqJsonLd && <script type="application/ld+json" set:html={safeJsonLdSerialize(faqJsonLd)} />}
+		{alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
+	</Fragment>
 	<article class="article">
 		{/* Hero: Full-width featured image */}
 		{
 			post.data.featured_image && (
 				<div class="article-hero" {...post.edit.featured_image}>
-					<Image image={post.data.featured_image} />
+					<Image
+						image={post.data.featured_image}
+						alt={post.data.featured_image?.alt || post.data.title}
+					/>
 				</div>
 			)
 		}
@@ -130,14 +206,14 @@ const publishDate =
 						bylines.length > 0 && (
 							<div class="meta-block byline-block">
 								<span class="meta-label">
-									{bylines.length === 1 ? "Author" : "Authors"}
+									{bylines.length === 1 ? ui.author : ui.authors}
 								</span>
 								<div class="bylines">
 									{bylines.map((credit) => (
 										<div class="byline">
 											{credit.byline.avatarMediaId && (
 												<img
-													src={`${import.meta.env.BASE_URL}_emdash/api/media/file/${credit.byline.avatarMediaId}`}
+													src={blogPath(`/_emdash/api/media/file/${credit.byline.avatarMediaId}`)}
 													alt={credit.byline.displayName}
 													class="byline-avatar"
 												/>
@@ -159,14 +235,14 @@ const publishDate =
 					{
 						publishDate && (
 							<div class="meta-block">
-								<span class="meta-label">Published</span>
+								<span class="meta-label">{ui.published}</span>
 								<time class="meta-value">{publishDate}</time>
 							</div>
 						)
 					}
 					<div class="meta-block">
-						<span class="meta-label">Reading time</span>
-						<span class="meta-value">{readingTime} min</span>
+						<span class="meta-label">{lang === "es" ? "Tiempo de lectura" : "Reading time"}</span>
+						<span class="meta-value">{readingTime} {ui.readingTime}</span>
 					</div>
 					{
 						tags.length > 0 && (
@@ -212,7 +288,7 @@ const publishDate =
 								</>
 							)
 						}
-						<span>{readingTime} min read</span>
+						<span>{readingTime} {ui.readingTime}</span>
 					</div>
 					<h1 class="article-title" {...post.edit.title}>{post.data.title}</h1>
 					{
@@ -226,6 +302,22 @@ const publishDate =
 					<PortableText value={post.data.content} />
 				</div>
 
+				{
+					faqItems.length > 0 && (
+						<div class="article-faq">
+							<h2>{lang === "es" ? "Preguntas frecuentes" : "Frequently Asked Questions"}</h2>
+							<div class="faq-list">
+								{faqItems.map((item) => (
+									<div class="faq-item">
+										<h3 class="faq-question">{item.question}</h3>
+										<div class="faq-answer">{item.answer}</div>
+									</div>
+								))}
+							</div>
+						</div>
+					)
+				}
+
 				<div class="article-comments">
 					<Comments collection="posts" contentId={post.data.id} threaded />
 					<CommentForm collection="posts" contentId={post.data.id} />
@@ -236,7 +328,7 @@ const publishDate =
 			<aside class="article-sidebar">
 				<div class="sidebar-sticky">
 					<nav class="toc" aria-label="Table of contents">
-						<h4 class="toc-title">On this page</h4>
+						<h4 class="toc-title">{ui.onThisPage}</h4>
 						<div class="toc-content" id="toc-content">
 							<!-- Populated by JS -->
 						</div>
@@ -253,7 +345,7 @@ const publishDate =
 		otherPostsWithTags.length > 0 && (
 			<section class="more-posts">
 				<div class="more-inner">
-					<h2 class="more-title">Continue reading</h2>
+					<h2 class="more-title">{ui.continueReading}</h2>
 					<div class="more-grid">
 						{otherPostsWithTags.map(
 							({ post: p, tags: postTags, bylines: postBylines }) => (
@@ -845,6 +937,46 @@ const publishDate =
 		background: var(--color-surface);
 		padding: var(--tag-padding-y) var(--spacing-2);
 		border-radius: var(--radius);
+	}
+
+	/* FAQ section */
+	.article-faq {
+		margin-top: var(--spacing-12);
+		padding-top: var(--spacing-10);
+		border-top: 1px solid var(--color-border);
+	}
+
+	.article-faq h2 {
+		font-size: var(--font-size-2xl);
+		font-weight: 600;
+		margin-bottom: var(--spacing-8);
+	}
+
+	.faq-list {
+		display: flex;
+		flex-direction: column;
+		gap: var(--spacing-6);
+	}
+
+	.faq-item {
+		padding: var(--spacing-6);
+		background: var(--color-bg-subtle);
+		border-radius: var(--radius-lg);
+		border-left: 3px solid var(--color-accent);
+	}
+
+	.faq-question {
+		font-size: var(--font-size-lg);
+		font-weight: 600;
+		color: var(--color-text);
+		margin-bottom: var(--spacing-3);
+	}
+
+	.faq-answer {
+		font-size: var(--font-size-base);
+		line-height: var(--leading-relaxed);
+		color: var(--color-text-secondary);
+		white-space: pre-wrap;
 	}
 
 	/* Comments section */

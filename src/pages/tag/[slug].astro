@@ -12,23 +12,26 @@ if (!term) {
 	return Astro.redirect(`${base}/404`);
 }
 
-const { entries: posts } = await getEmDashCollection("posts", {
+const { entries: posts, cacheHint } = await getEmDashCollection("posts", {
 	where: { tag: term.slug },
 	orderBy: { published_at: "desc" },
 });
 
-// Fetch tags for display on each post card
+Astro.cache.set(cacheHint);
+
+// Fetch tags and bylines for display on each post card
 const filteredPosts = await Promise.all(
 	posts.map(async (post) => {
 		const tags = await getEntryTerms("posts", post.data.id, "tag");
-		return { post, tags };
+		const bylines = post.data.bylines ?? [];
+		return { post, tags, bylines };
 	})
 );
 ---
 
 <Base
-	title={`Posts tagged "${term.label}"`}
-	description={`All posts tagged with ${term.label}`}
+	title={`${term.label} Guides | Nice Catalogs`}
+	description={`${filteredPosts.length} guide${filteredPosts.length === 1 ? "" : "s"} about ${term.label.toLowerCase()} for digital catalogs, QR menus, and online ordering.`}
 >
 	<section class="archive-section">
 		<header class="archive-header">
@@ -45,7 +48,7 @@ const filteredPosts = await Promise.all(
 				<p class="no-posts">No posts with this tag yet.</p>
 			) : (
 				<div class="posts-grid">
-					{filteredPosts.map(({ post, tags }) => (
+					{filteredPosts.map(({ post, tags, bylines }) => (
 						<PostCard
 							title={post.data.title}
 							excerpt={post.data.excerpt}
@@ -54,6 +57,7 @@ const filteredPosts = await Promise.all(
 							date={post.data.publishedAt ?? undefined}
 							readingTime={getReadingTime(post.data.content)}
 							tags={tags.map((t) => ({ slug: t.slug, label: t.label }))}
+							bylines={bylines}
 						/>
 					))}
 				</div>

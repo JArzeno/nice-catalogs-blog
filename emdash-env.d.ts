@@ -26,6 +26,9 @@ export interface Post {
   featured_image?: { id: string; src?: string; alt?: string; width?: number; height?: number; filename?: string; mimeType?: string; blurhash?: string; dominantColor?: string; provider?: string; previewUrl?: string; meta?: Record<string, unknown> };
   content?: PortableTextBlock[];
   excerpt?: string;
+  language?: string;
+  translation_of?: string;
+  faq?: { "question": string; "answer": string }[];
   createdAt: Date;
   updatedAt: Date;
   publishedAt: Date | null;

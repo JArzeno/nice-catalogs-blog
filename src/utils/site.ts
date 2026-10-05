@@ -1,10 +1,44 @@
 const TRAILING_SLASH_RE = /\/+$/;
+const ABSOLUTE_HTTP_URL_RE = /^https?:\/\//i;
+
+/** Brand name used in page titles and structured data. */
+export const SITE_NAME = "Nice Catalogs";
 
 /** Public origin from Astro's `site` option (e.g. "https://nicecatalogs.com"). */
 export const SITE_ORIGIN = new URL(import.meta.env.SITE).origin;
 
 /** Blog root including the Astro `base` (e.g. "https://nicecatalogs.com/blog"). */
 export const BLOG_URL = `${SITE_ORIGIN}${import.meta.env.BASE_URL.replace(TRAILING_SLASH_RE, "")}`;
+
+/**
+ * Last-resort OG image, used only when neither the page nor the admin's
+ * Settings → SEO default OG image provides one.
+ */
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+
+/**
+ * Organization logo for structured data. Same URL as the main site's
+ * Organization schema (`https://nicecatalogs.com/#organization`).
+ */
+export const PUBLISHER_LOGO = `${SITE_ORIGIN}/favicon.png`;
+
+/**
+ * Absolute URL for an EmDash media URL. EmDash builds media paths without
+ * the Astro `base` ("/_emdash/api/media/file/…"), but they are served under
+ * /blog. Returns null for anything that isn't an http(s) URL or a
+ * root-relative path.
+ */
+export function absoluteMediaUrl(url: string | null | undefined): string | null {
+	if (!url) return null;
+	if (ABSOLUTE_HTTP_URL_RE.test(url)) return url;
+	if (!url.startsWith("/") || url.startsWith("//")) return null;
+	return url.startsWith("/_emdash/") ? absoluteUrl(url) : `${SITE_ORIGIN}${url}`;
+}
+
+/** Page title with the brand appended unless it already mentions it. */
+export function withBrand(title: string): string {
+	return title.toLowerCase().includes(SITE_NAME.toLowerCase()) ? title : `${title} | ${SITE_NAME}`;
+}
 
 /**
  * Absolute URL for a blog path, e.g. absoluteUrl("/posts/hello") ->

@@ -1,5 +1,5 @@
 ---
-import { getMenu, getEmDashCollection } from "emdash";
+import { getMenu, getEmDashCollection, getSiteSettings } from "emdash";
 import {
 	WidgetArea,
 	EmDashHead,
@@ -9,10 +9,20 @@ import {
 import { createPublicPageContext } from "emdash/page";
 
 import "../styles/theme.css";
-import { canonicalFor } from "../utils/site";
+import { LANGUAGES, type Lang } from "../utils/language";
+import {
+	SITE_NAME,
+	absoluteMediaUrl,
+	canonicalFor,
+	blogPath,
+	DEFAULT_OG_IMAGE,
+	withBrand,
+} from "../utils/site";
 
 interface Props {
 	title: string;
+	/** Title without the brand suffix, used for og:title and the JSON-LD headline */
+	pageTitle?: string | null;
 	description?: string | null;
 	image?: string | null;
 	canonical?: string | null;
@@ -21,12 +31,14 @@ interface Props {
 	publishedTime?: string | null;
 	modifiedTime?: string | null;
 	author?: string | null;
+	lang?: Lang;
 	/** Pass content reference for plugin page contributions on content pages */
 	content?: { collection: string; id: string; slug?: string | null };
 }
 
 const {
 	title,
+	pageTitle,
 	description,
 	image,
 	canonical,
@@ -35,33 +47,41 @@ const {
 	publishedTime,
 	modifiedTime,
 	author,
+	lang = "en",
 	content,
 } = Astro.props;
-const siteTitle = "Nice Catalogs";
-// If title already includes site title (from getSeoMeta), use as-is
-const fullTitle = title.includes(siteTitle) ? title : `${title} — ${siteTitle}`;
+const fullTitle = withBrand(title);
 
-// Fetch primary menu defined in seed
 const base = "/blog";
-const menu = await getMenu("primary");
+const [menu, { entries: pages }, settings] = await Promise.all([
+	// Fetch primary menu defined in seed
+	getMenu("primary"),
+	// Fetch pages for footer
+	getEmDashCollection("pages"),
+	getSiteSettings(),
+]);
 
-// Fetch pages for footer
-const { entries: pages } = await getEmDashCollection("pages");
+// og:image: the page's own image, then the default set in the admin
+// (Settings → SEO), then the site-wide fallback.
+const ogImage =
+	image || absoluteMediaUrl(settings.seo?.defaultOgImage?.url) || DEFAULT_OG_IMAGE;
 
 // Build public page context for plugin contributions
 // SEO data is passed here and rendered securely by EmDashHead
 const pageCtx = createPublicPageContext({
-	Astro,
+	url: Astro.url,
+	locale: lang,
 	kind: content ? "content" : "custom",
 	pageType: type,
 	title: fullTitle,
+	pageTitle,
 	description,
 	canonical: canonical ?? canonicalFor(Astro.url),
-	image,
+	image: ogImage,
 	content,
-	seo: { ogImage: image, robots },
+	seo: { robots },
 	articleMeta: { publishedTime, modifiedTime, author },
-	siteName: siteTitle,
+	siteName: SITE_NAME,
 });
 
 // Check if user is logged in (for showing admin link)
@@ -69,17 +89,19 @@ const isLoggedIn = !!Astro.locals.user;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<!-- System font stack — no external fonts -->
 		<title>{fullTitle}</title>
+		<meta property="og:locale" content={LANGUAGES[lang].ogLocale} />
 		<EmDashHead page={pageCtx} />
+		<slot name="head" />
 		<!-- Light mode only -->
 		<!-- Google tag (gtag.js) -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" type="590bd37e92e74d0fb3f8ee52-text/javascript"></script>
-		<script type="590bd37e92e74d0fb3f8ee52-text/javascript">
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" data-cfasync="false"></script>
+		<script data-cfasync="false">
 			window.dataLayer = window.dataLayer || [];
 			function gtag(){dataLayer.push(arguments);}
 			gtag('js', new Date());
@@ -145,7 +167,7 @@ const isLoggedIn = !!Astro.locals.user;
 					<a href="/signup" class="nav-cta">Get Started</a>
 					{
 						isLoggedIn && (
-							<a href={`${import.meta.env.BASE_URL}_emdash/admin`} class="nav-admin">
+							<a href={blogPath("/_emdash/admin")} class="nav-admin">
 								Admin
 							</a>
 						)

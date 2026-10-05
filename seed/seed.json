@@ -42,6 +42,45 @@
 					"slug": "excerpt",
 					"label": "Excerpt",
 					"type": "text"
+				},
+				{
+					"slug": "language",
+					"label": "Language (auto-detected if empty)",
+					"type": "select",
+					"required": false,
+					"options": [
+						{ "value": "en", "label": "English" },
+						{ "value": "es", "label": "Spanish" }
+					]
+				},
+				{
+					"slug": "translation_of",
+					"label": "Translation of (post slug)",
+					"type": "reference",
+					"required": false,
+					"options": { "collection": "posts" }
+				},
+				{
+					"slug": "faq",
+					"label": "FAQ",
+					"type": "repeater",
+					"required": false,
+					"validation": {
+						"subFields": [
+							{
+								"slug": "question",
+								"label": "Question",
+								"type": "string",
+								"required": true
+							},
+							{
+								"slug": "answer",
+								"label": "Answer",
+								"type": "text",
+								"required": true
+							}
+						]
+					}
 				}
 			]
 		},
