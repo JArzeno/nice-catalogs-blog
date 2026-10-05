@@ -42,6 +42,17 @@
 					"slug": "excerpt",
 					"label": "Excerpt",
 					"type": "text"
+				},
+				{
+					"slug": "language",
+					"label": "Language",
+					"type": "select",
+					"required": false,
+					"defaultValue": "en",
+					"options": [
+						{ "value": "en", "label": "English" },
+						{ "value": "es", "label": "Spanish" }
+					]
 				}
 			]
 		},

@@ -17,7 +17,15 @@ const MEDIA_FILE_RE = /^(?:\/blog)?\/_emdash\/api\/media\/file\/(.+)$/;
 //    uninitialized. The media API handler then returns "Storage not configured".
 //    Fix: serve R2 files directly from this middleware, bypassing EmDash entirely.
 export const onRequest = defineMiddleware(async (context, next) => {
-	const { pathname } = new URL(context.request.url);
+	const url = new URL(context.request.url);
+	const { pathname } = url;
+
+	// Normalize trailing slashes: redirect /blog/ to /blog
+	if (pathname.endsWith("/") && pathname !== "/") {
+		const newPath = pathname.replace(/\/+$/, "");
+		return Response.redirect(new URL(newPath + url.search, url.origin), 301);
+	}
+
 	const mediaMatch = MEDIA_FILE_RE.exec(pathname);
 
 	if (mediaMatch) {
@@ -65,9 +73,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		"/blog/_emdash/api/media/file/",
 	);
 
+	// Add cache headers for public content (skip admin and auth pages)
+	const headers = new Headers(response.headers);
+	const isPublic = !pathname.includes("/_emdash/") && !pathname.includes("/admin");
+	const hasAuthCookie = context.request.headers.get("cookie")?.includes("emdash-auth");
+	
+	if (isPublic && !hasAuthCookie && context.request.method === "GET") {
+		headers.set("Cache-Control", "public, s-maxage=600, stale-while-revalidate=86400");
+	}
+
 	return new Response(rewritten, {
 		status: response.status,
 		statusText: response.statusText,
-		headers: response.headers,
+		headers,
 	});
 });

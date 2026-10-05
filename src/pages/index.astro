@@ -4,6 +4,7 @@ import { Image } from "emdash/ui";
 import Base from "../layouts/Base.astro";
 import PostCard from "../components/PostCard.astro";
 import { getReadingTime } from "../utils/reading-time";
+import { blogPath, DEFAULT_OG_IMAGE } from "../utils/site";
 
 const { entries: posts, cacheHint } = await getEmDashCollection("posts");
 
@@ -59,7 +60,11 @@ function formatDate(date: Date | null | undefined) {
 }
 ---
 
-<Base title="Blog" description="Tips, guides, and insights for digital catalogs and menus">
+<Base 
+	title="Digital Menu, QR & WhatsApp Catalog Guides | Nice Catalogs" 
+	description="Guides for small businesses: build a digital catalog or QR menu, take orders on WhatsApp, and share products with a link. In English and Spanish."
+	image={DEFAULT_OG_IMAGE}
+>
 	{
 		posts.length === 0 ? (
 			<section class="empty-state">
@@ -77,7 +82,10 @@ function formatDate(date: Date | null | undefined) {
 						<div class="featured-grid">
 							<a href={`${base}/posts/${featuredPost.id}`} class="featured-image-link">
 								<div class="featured-image">
-									<Image image={featuredPost.data.featured_image} />
+									<Image 
+										image={featuredPost.data.featured_image} 
+										alt={featuredPost.data.featured_image?.alt || featuredPost.data.title}
+									/>
 								</div>
 							</a>
 							<div class="featured-content">
@@ -91,7 +99,7 @@ function formatDate(date: Date | null | undefined) {
 														<span class="featured-byline">
 															{credit.byline.avatarMediaId && (
 																<img
-																	src={`${import.meta.env.BASE_URL}_emdash/api/media/file/${credit.byline.avatarMediaId}`}
+																	src={blogPath(`/_emdash/api/media/file/${credit.byline.avatarMediaId}`)}
 																	alt={credit.byline.displayName}
 																	class="featured-byline-avatar"
 																/>

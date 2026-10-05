@@ -9,7 +9,7 @@ import {
 import { createPublicPageContext } from "emdash/page";
 
 import "../styles/theme.css";
-import { canonicalFor } from "../utils/site";
+import { canonicalFor, blogPath, DEFAULT_OG_IMAGE } from "../utils/site";
 
 interface Props {
 	title: string;
@@ -21,6 +21,7 @@ interface Props {
 	publishedTime?: string | null;
 	modifiedTime?: string | null;
 	author?: string | null;
+	lang?: string;
 	/** Pass content reference for plugin page contributions on content pages */
 	content?: { collection: string; id: string; slug?: string | null };
 }
@@ -35,6 +36,7 @@ const {
 	publishedTime,
 	modifiedTime,
 	author,
+	lang = "en",
 	content,
 } = Astro.props;
 const siteTitle = "Nice Catalogs";
@@ -57,9 +59,9 @@ const pageCtx = createPublicPageContext({
 	title: fullTitle,
 	description,
 	canonical: canonical ?? canonicalFor(Astro.url),
-	image,
+	image: image ?? DEFAULT_OG_IMAGE,
 	content,
-	seo: { ogImage: image, robots },
+	seo: { ogImage: image ?? DEFAULT_OG_IMAGE, robots },
 	articleMeta: { publishedTime, modifiedTime, author },
 	siteName: siteTitle,
 });
@@ -69,17 +71,18 @@ const isLoggedIn = !!Astro.locals.user;
 ---
 
 <!doctype html>
-<html lang="en">
+<html lang={lang}>
 	<head>
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<!-- System font stack — no external fonts -->
 		<title>{fullTitle}</title>
+		<meta property="og:locale" content={lang === "es" ? "es_419" : "en_US"} />
 		<EmDashHead page={pageCtx} />
 		<!-- Light mode only -->
 		<!-- Google tag (gtag.js) -->
-		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" type="590bd37e92e74d0fb3f8ee52-text/javascript"></script>
-		<script type="590bd37e92e74d0fb3f8ee52-text/javascript">
+		<script async src="https://www.googletagmanager.com/gtag/js?id=G-WPYL7C12J5" data-cfasync="false"></script>
+		<script data-cfasync="false">
 			window.dataLayer = window.dataLayer || [];
 			function gtag(){dataLayer.push(arguments);}
 			gtag('js', new Date());
@@ -145,7 +148,7 @@ const isLoggedIn = !!Astro.locals.user;
 					<a href="/signup" class="nav-cta">Get Started</a>
 					{
 						isLoggedIn && (
-							<a href={`${import.meta.env.BASE_URL}_emdash/admin`} class="nav-admin">
+							<a href={blogPath("/_emdash/admin")} class="nav-admin">
 								Admin
 							</a>
 						)

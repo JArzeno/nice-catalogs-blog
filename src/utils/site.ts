@@ -6,6 +6,9 @@ export const SITE_ORIGIN = new URL(import.meta.env.SITE).origin;
 /** Blog root including the Astro `base` (e.g. "https://nicecatalogs.com/blog"). */
 export const BLOG_URL = `${SITE_ORIGIN}${import.meta.env.BASE_URL.replace(TRAILING_SLASH_RE, "")}`;
 
+/** Default OG image (fallback for posts/pages without featured images). */
+export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
+
 /**
  * Absolute URL for a blog path, e.g. absoluteUrl("/posts/hello") ->
  * "https://nicecatalogs.com/blog/posts/hello". No trailing slash, so the
