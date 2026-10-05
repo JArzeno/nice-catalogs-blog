@@ -9,6 +9,7 @@ import {
 import { createPublicPageContext } from "emdash/page";
 
 import "../styles/theme.css";
+import { canonicalFor } from "../utils/site";
 
 interface Props {
 	title: string;
@@ -55,7 +56,7 @@ const pageCtx = createPublicPageContext({
 	pageType: type,
 	title: fullTitle,
 	description,
-	canonical,
+	canonical: canonical ?? canonicalFor(Astro.url),
 	image,
 	content,
 	seo: { ogImage: image, robots },
