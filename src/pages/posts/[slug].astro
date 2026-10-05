@@ -75,17 +75,27 @@ const tags = await getEntryTerms("posts", post.data.id, "tag");
 // Bylines are already hydrated by getEmDashEntry
 const bylines = post.data.bylines ?? [];
 
-// Get language (default to "en", with Spanish slug detection fallback)
-function detectLanguage(slug: string, explicitLang?: string): string {
-	if (explicitLang) return explicitLang;
-	// Spanish detection: common Spanish words/patterns in slugs
-	const spanishSlugs = ['catalogo', 'menu-digital', 'restaurante', 'whatsapp', 'como-', 'para-', 'que-es'];
-	if (spanishSlugs.some(pattern => slug.includes(pattern))) {
+// Get language (default to "en", with text-based Spanish detection fallback)
+function detectLanguageFromText(title: string, excerpt?: string): string {
+	const text = `${title} ${excerpt || ''}`.toLowerCase();
+	
+	// Spanish-specific characters
+	const hasSpanishChars = /[áéíóúñ¿¡]/.test(text);
+	
+	// Spanish stopwords (need at least 2 matches)
+	const spanishStopwords = ['para', 'cómo', 'como', 'de la', 'el ', 'los ', 'las ', 'con ', 'sin ', ' tu ', 'por '];
+	const stopwordMatches = spanishStopwords.filter(word => text.includes(word)).length;
+	
+	// Mark as Spanish if it has accented chars OR at least 2 stopwords
+	if (hasSpanishChars || stopwordMatches >= 2) {
 		return 'es';
 	}
+	
 	return 'en';
 }
-const lang = detectLanguage(slug, post.data.language as string | undefined);
+
+const explicitLang = post.data.language as string | undefined;
+const lang = explicitLang || detectLanguageFromText(post.data.title, post.data.excerpt);
 
 // Get reading time
 const readingTime = getReadingTime(post.data.content);
