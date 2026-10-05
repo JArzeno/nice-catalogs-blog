@@ -75,8 +75,17 @@ const tags = await getEntryTerms("posts", post.data.id, "tag");
 // Bylines are already hydrated by getEmDashEntry
 const bylines = post.data.bylines ?? [];
 
-// Get language (default to "en")
-const lang = (post.data.language as string | undefined) ?? "en";
+// Get language (default to "en", with Spanish slug detection fallback)
+function detectLanguage(slug: string, explicitLang?: string): string {
+	if (explicitLang) return explicitLang;
+	// Spanish detection: common Spanish words/patterns in slugs
+	const spanishSlugs = ['catalogo', 'menu-digital', 'restaurante', 'whatsapp', 'como-', 'para-', 'que-es'];
+	if (spanishSlugs.some(pattern => slug.includes(pattern))) {
+		return 'es';
+	}
+	return 'en';
+}
+const lang = detectLanguage(slug, post.data.language as string | undefined);
 
 // Get reading time
 const readingTime = getReadingTime(post.data.content);
@@ -138,15 +147,23 @@ const publishDate =
 	}) ?? null;
 
 // JSON-LD for BlogPosting
-const authorName = bylines.length > 0 ? bylines[0].byline.displayName : "Julio Arzeno";
+const authorName = (bylines.length > 0 && bylines[0]?.byline?.displayName) 
+	? bylines[0].byline.displayName 
+	: "Julio Arzeno";
+
+// Headline is the bare post title (max 110 chars, no suffix)
+const headline = post.data.title.length <= 110 
+	? post.data.title 
+	: post.data.title.substring(0, 107) + "...";
+
 const jsonLd = {
 	"@context": "https://schema.org",
 	"@type": "BlogPosting",
-	headline: post.data.title.length <= 110 ? post.data.title : post.data.title.substring(0, 107) + "...",
+	headline,
 	description: seo.description || post.data.excerpt || "",
 	image: ogImage ? [ogImage] : [],
 	datePublished: post.data.publishedAt?.toISOString() ?? "",
-	dateModified: post.data.updatedAt.toISOString(),
+	dateModified: post.data.updatedAt?.toISOString() ?? "",
 	inLanguage: lang,
 	author: {
 		"@type": "Person",
