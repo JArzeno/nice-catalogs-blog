@@ -2,6 +2,7 @@
 import type { MediaValue, ContentBylineCredit } from "emdash";
 import { Image } from "emdash/ui";
 import { blogPath } from "../utils/site";
+import { LANGUAGES, type Lang } from "../utils/language";
 
 interface Props {
 	title: string;
@@ -12,6 +13,7 @@ interface Props {
 	readingTime?: number;
 	tags?: Array<{ slug: string; label: string }>;
 	bylines?: ContentBylineCredit[];
+	locale?: Lang;
 }
 
 const {
@@ -23,10 +25,11 @@ const {
 	readingTime,
 	tags,
 	bylines,
+	locale = "en",
 } = Astro.props;
 
 const formattedDate = date
-	? date.toLocaleDateString("en-US", {
+	? date.toLocaleDateString(LANGUAGES[locale].dateLocale, {
 			year: "numeric",
 			month: "short",
 			day: "numeric",
