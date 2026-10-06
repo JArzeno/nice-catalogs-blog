@@ -22,7 +22,13 @@ export function createPlugin() {
 			"page:metadata": async ({ page }) => {
 				if (page.pageType !== "article" || !page.canonical) return null;
 
-				const title = page.pageTitle ?? page.title ?? "";
+				// Strip "| Nice Catalogs" from title if present to get bare headline
+				let title = page.pageTitle ?? page.title ?? "";
+				const brandSuffix = ` | ${SITE_NAME}`;
+				if (title.endsWith(brandSuffix)) {
+					title = title.slice(0, -brandSuffix.length);
+				}
+				
 				const headline =
 					title.length > HEADLINE_MAX_LENGTH ? `${title.slice(0, HEADLINE_MAX_LENGTH - 3)}...` : title;
 				const image = page.seo?.ogImage || page.image;

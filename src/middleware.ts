@@ -10,9 +10,12 @@ const REPEATED_SLASHES_RE = /\/{2,}/g;
 const TRAILING_SLASHES_RE = /\/+$/;
 const NO_STORE_RE = /private|no-store/i;
 
-// How long anonymous HTML stays in the edge cache. Nothing purges the cache
-// on publish yet, so this is also the longest an edit takes to show up.
-const HTML_CACHE_TTL_SECONDS = 60;
+// How long anonymous HTML stays in the edge cache (1 hour).
+const HTML_CACHE_TTL_SECONDS = 3600;
+
+// Stale-while-revalidate: allow serving stale content for up to 24 hours
+// while fetching a fresh copy in the background.
+const HTML_SWR_SECONDS = 86400;
 
 // EmDash has two bugs when Astro's base: "/blog" is set:
 //
@@ -117,7 +120,17 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		!response.headers.has("set-cookie") &&
 		!NO_STORE_RE.test(response.headers.get("cache-control") ?? "")
 	) {
-		result.headers.set("Cache-Control", `public, max-age=0, s-maxage=${HTML_CACHE_TTL_SECONDS}`);
+		// Use Cloudflare-CDN-Cache-Control for edge, keep browser cache short.
+		// This prevents Cloudflare's Browser Cache TTL setting from overriding
+		// the browser cache directive.
+		result.headers.set(
+			"Cache-Control", 
+			`public, max-age=60`
+		);
+		result.headers.set(
+			"Cloudflare-CDN-Cache-Control",
+			`max-age=${HTML_CACHE_TTL_SECONDS}, stale-while-revalidate=${HTML_SWR_SECONDS}`
+		);
 		context.locals.cfContext.waitUntil(cache.put(cacheKey, result.clone()));
 	}
 

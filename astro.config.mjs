@@ -15,6 +15,14 @@ const blogSeoPlugin = {
 	entrypoint: fileURLToPath(new URL("./src/plugins/blog-seo.ts", import.meta.url)),
 };
 
+// Site-local plugin: purges Cloudflare cache on post publish/update (src/plugins/cache-purge.ts)
+const cachePurgePlugin = {
+	id: "cache-purge",
+	version: "1.0.0",
+	format: "native",
+	entrypoint: fileURLToPath(new URL("./src/plugins/cache-purge.ts", import.meta.url)),
+};
+
 export default defineConfig({
 	output: "server",
 	site: "https://nicecatalogs.com",
@@ -29,7 +37,7 @@ export default defineConfig({
 		emdash({
 			database: d1({ binding: "DB", session: "auto" }),
 			storage: r2({ binding: "MEDIA" }),
-			plugins: [formsPlugin(), blogSeoPlugin],
+			plugins: [formsPlugin(), blogSeoPlugin, cachePurgePlugin],
 		}),
 	],
 	devToolbar: { enabled: false },
