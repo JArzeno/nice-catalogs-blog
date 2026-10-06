@@ -23,6 +23,13 @@ const cachePurgePlugin = {
 	entrypoint: fileURLToPath(new URL("./src/plugins/cache-purge.ts", import.meta.url)),
 };
 
+// Build-time cache version: Workers Builds sets WORKERS_CI_COMMIT_SHA,
+// Pages sets CF_PAGES_COMMIT_SHA, otherwise use timestamp.
+const CACHE_VERSION = 
+	process.env.WORKERS_CI_COMMIT_SHA?.slice(0, 8) ||
+	process.env.CF_PAGES_COMMIT_SHA?.slice(0, 8) ||
+	Date.now().toString();
+
 export default defineConfig({
 	output: "server",
 	site: "https://nicecatalogs.com",
@@ -31,6 +38,11 @@ export default defineConfig({
 	image: {
 		layout: "constrained",
 		responsiveStyles: true,
+	},
+	vite: {
+		define: {
+			__CACHE_VERSION__: JSON.stringify(CACHE_VERSION),
+		},
 	},
 	integrations: [
 		react(),

@@ -32,6 +32,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 	const { pathname } = url;
 	const isGet = context.request.method === "GET";
+	
+	const startTime = Date.now();
 
 	// Normalize trailing slashes: redirect /blog/ to /blog. Repeated slashes are
 	// collapsed so a path like "//evil.com/" can't become an off-site redirect.
@@ -88,9 +90,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	// admin/API routes and any URL with a query string (search, preview and
 	// edit links) always render fresh and are never stored.
 	//
-	// Cache key includes CF_PAGES_COMMIT_SHA (set by Cloudflare on deploy) to
-	// prevent serving stale HTML after a deploy. If not available, falls back
-	// to plain URL (local dev, non-Pages deploys).
+	// Cache key includes build-time version (inlined via Vite define) to
+	// prevent serving stale HTML after a deploy. Version comes from
+	// WORKERS_CI_COMMIT_SHA (Workers Builds), CF_PAGES_COMMIT_SHA (Pages),
+	// or build timestamp.
 	const cache =
 		!import.meta.env.DEV &&
 		isGet &&
@@ -101,7 +104,8 @@ export const onRequest = defineMiddleware(async (context, next) => {
 				(caches as unknown as { default: Cache }).default
 			: null;
 	
-	const cacheVersion = import.meta.env.CF_PAGES_COMMIT_SHA || "v1";
+	// @ts-expect-error __CACHE_VERSION__ is defined by Vite at build time
+	const cacheVersion = typeof __CACHE_VERSION__ !== "undefined" ? __CACHE_VERSION__ : "dev";
 	const cacheKey = new Request(`${url.toString()}?__v=${cacheVersion}`);
 
 	if (cache) {
@@ -128,6 +132,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		statusText: response.statusText,
 		headers: response.headers,
 	});
+	
+	// Add Server-Timing header for performance monitoring
+	const renderTime = Date.now() - startTime;
+	result.headers.set("Server-Timing", `render;dur=${renderTime}`);
 
 	// Only store successful pages that are the same for every visitor.
 	if (
@@ -146,7 +154,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		result.headers.set("Cloudflare-CDN-Cache-Control", edgeCache);
 		
 		// Log for verification (Cloudflare strips CDN-Cache-Control from client responses)
-		console.log(`[cache] Set headers for ${url.pathname}: Cache-Control="${browserCache}", Cloudflare-CDN-Cache-Control="${edgeCache}"`);
+		console.log(`[cache] Set headers for ${url.pathname}: Cache-Control="${browserCache}", Cloudflare-CDN-Cache-Control="${edgeCache}", version="${cacheVersion}"`);
 		
 		context.locals.cfContext.waitUntil(cache.put(cacheKey, result.clone()));
 	}

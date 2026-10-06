@@ -137,14 +137,12 @@ const ui = uiStrings[lang];
 
 const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
-// Fetch tags for related posts (bylines are already hydrated by getEmDashCollection)
-const otherPostsWithTags = await Promise.all(
-	otherPosts.map(async (p) => {
-		const postTags = await getEntryTerms("posts", p.data.id, "tag");
-		const postBylines = p.data.bylines ?? [];
-		return { post: p, tags: postTags, bylines: postBylines };
-	})
-);
+// Prepare related posts without fetching tags (N+1 query elimination for CPU optimization)
+// Tags are omitted from related-post cards to reduce render time
+const otherPostsWithTags = otherPosts.map((p) => {
+	const postBylines = p.data.bylines ?? [];
+	return { post: p, tags: [], bylines: postBylines };
+});
 
 const publishDate =
 	post.data.publishedAt?.toLocaleDateString(LANGUAGES[lang].dateLocale, {
@@ -351,7 +349,7 @@ const faqJsonLd = faqItems.length > 0 ? {
 					<h2 class="more-title">{ui.continueReading}</h2>
 					<div class="more-grid">
 						{otherPostsWithTags.map(
-							({ post: p, tags: postTags, bylines: postBylines }) => (
+							({ post: p, bylines: postBylines }) => (
 								<PostCard
 									title={p.data.title}
 									excerpt={p.data.excerpt}
@@ -359,7 +357,6 @@ const faqJsonLd = faqItems.length > 0 ? {
 									href={`${base}/posts/${p.id}`}
 									date={p.data.publishedAt ?? undefined}
 									readingTime={getReadingTime(p.data.content)}
-									tags={postTags.map((t) => ({ slug: t.slug, label: t.label }))}
 									bylines={postBylines}
 									locale={lang}
 								/>
