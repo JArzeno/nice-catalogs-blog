@@ -40,6 +40,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		return Response.redirect(new URL(target + url.search, url.origin), 301);
 	}
 
+	// Short-path redirects for legacy links
+	const BLOG_REDIRECTS: Record<string, string> = {
+		"/blog/public-link-catalog": "/blog/posts/send-product-catalog-as-a-link",
+		"/blog/ai-image-enhancement": "/blog/posts/ai-product-photo-enhancement",
+	};
+	
+	if (isGet && BLOG_REDIRECTS[pathname]) {
+		return Response.redirect(new URL(BLOG_REDIRECTS[pathname] + url.search, url.origin), 301);
+	}
+
 	const mediaMatch = MEDIA_FILE_RE.exec(pathname);
 
 	if (mediaMatch) {
@@ -77,6 +87,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	// Logged-in users (EmDash's auth middleware has already set locals.user),
 	// admin/API routes and any URL with a query string (search, preview and
 	// edit links) always render fresh and are never stored.
+	//
+	// Cache key includes CF_PAGES_COMMIT_SHA (set by Cloudflare on deploy) to
+	// prevent serving stale HTML after a deploy. If not available, falls back
+	// to plain URL (local dev, non-Pages deploys).
 	const cache =
 		!import.meta.env.DEV &&
 		isGet &&
@@ -86,7 +100,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			? // The DOM lib typing of `caches` (used by astro check) lacks Workers' `default` cache.
 				(caches as unknown as { default: Cache }).default
 			: null;
-	const cacheKey = new Request(url.toString());
+	
+	const cacheVersion = import.meta.env.CF_PAGES_COMMIT_SHA || "v1";
+	const cacheKey = new Request(`${url.toString()}?__v=${cacheVersion}`);
 
 	if (cache) {
 		const cached = await cache.match(cacheKey);
