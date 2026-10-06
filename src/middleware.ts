@@ -123,14 +123,15 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		// Use Cloudflare-CDN-Cache-Control for edge, keep browser cache short.
 		// This prevents Cloudflare's Browser Cache TTL setting from overriding
 		// the browser cache directive.
-		result.headers.set(
-			"Cache-Control", 
-			`public, max-age=60`
-		);
-		result.headers.set(
-			"Cloudflare-CDN-Cache-Control",
-			`max-age=${HTML_CACHE_TTL_SECONDS}, stale-while-revalidate=${HTML_SWR_SECONDS}`
-		);
+		const browserCache = `public, max-age=60`;
+		const edgeCache = `max-age=${HTML_CACHE_TTL_SECONDS}, stale-while-revalidate=${HTML_SWR_SECONDS}`;
+		
+		result.headers.set("Cache-Control", browserCache);
+		result.headers.set("Cloudflare-CDN-Cache-Control", edgeCache);
+		
+		// Log for verification (Cloudflare strips CDN-Cache-Control from client responses)
+		console.log(`[cache] Set headers for ${url.pathname}: Cache-Control="${browserCache}", Cloudflare-CDN-Cache-Control="${edgeCache}"`);
+		
 		context.locals.cfContext.waitUntil(cache.put(cacheKey, result.clone()));
 	}
 

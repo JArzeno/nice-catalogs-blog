@@ -48,13 +48,18 @@ export function createPlugin() {
 						dateModified: modifiedTime || publishedTime || undefined,
 						inLanguage: page.locale,
 						author: author ? { "@type": "Person", name: author, url: SITE_ORIGIN } : undefined,
-						publisher: {
-							"@type": "Organization",
-							"@id": `${SITE_ORIGIN}/#organization`,
-							name: SITE_NAME,
-							url: SITE_ORIGIN,
-							logo: { "@type": "ImageObject", url: PUBLISHER_LOGO },
+					publisher: {
+						"@type": "Organization",
+						"@id": `${SITE_ORIGIN}/#organization`,
+						name: SITE_NAME,
+						url: SITE_ORIGIN,
+						logo: {
+							"@type": "ImageObject",
+							url: PUBLISHER_LOGO,
+							width: 512,
+							height: 512,
 						},
+					},
 						mainEntityOfPage: { "@type": "WebPage", "@id": page.canonical },
 					}),
 				};
