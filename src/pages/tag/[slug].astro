@@ -1,7 +1,9 @@
 ---
 import { getTerm, getEmDashCollection, getEntryTerms } from "emdash";
 import Base from "../../layouts/Base.astro";
+import LanguageFilter from "../../components/LanguageFilter.astro";
 import PostCard from "../../components/PostCard.astro";
+import { filterByLanguage, langFilter } from "../../utils/language";
 import { getReadingTime } from "../../utils/reading-time";
 
 const { slug } = Astro.params;
@@ -12,12 +14,16 @@ if (!term) {
 	return Astro.redirect(`${base}/404`);
 }
 
-const { entries: posts, cacheHint } = await getEmDashCollection("posts", {
+const { entries: allPosts, cacheHint } = await getEmDashCollection("posts", {
 	where: { tag: term.slug },
 	orderBy: { published_at: "desc" },
 });
 
 Astro.cache.set(cacheHint);
+
+// Optional ?lang=en|es filter
+const lang = langFilter(Astro.url);
+const posts = filterByLanguage(allPosts, lang);
 
 // Fetch tags and bylines for display on each post card
 const filteredPosts = await Promise.all(
@@ -41,11 +47,16 @@ const filteredPosts = await Promise.all(
 				{filteredPosts.length}
 				{filteredPosts.length === 1 ? "post" : "posts"}
 			</p>
+			<div class="archive-filter">
+				<LanguageFilter current={lang} />
+			</div>
 		</header>
 
 		{
 			filteredPosts.length === 0 ? (
-				<p class="no-posts">No posts with this tag yet.</p>
+				<p class="no-posts">
+					{lang ? "No posts with this tag in this language yet." : "No posts with this tag yet."}
+				</p>
 			) : (
 				<div class="posts-grid">
 					{filteredPosts.map(({ post, tags, bylines }) => (
@@ -99,6 +110,10 @@ const filteredPosts = await Promise.all(
 	.archive-count {
 		font-size: var(--font-size-sm);
 		color: var(--color-muted);
+	}
+
+	.archive-filter {
+		margin-top: var(--spacing-6);
 	}
 
 	.posts-grid {

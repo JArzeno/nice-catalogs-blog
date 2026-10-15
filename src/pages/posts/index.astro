@@ -1,12 +1,18 @@
 ---
 import { getEmDashCollection, getEntryTerms } from "emdash";
 import Base from "../../layouts/Base.astro";
+import LanguageFilter from "../../components/LanguageFilter.astro";
+import { filterByLanguage, langFilter } from "../../utils/language";
 import { getReadingTime } from "../../utils/reading-time";
 import { blogPath } from "../../utils/site";
 
-const { entries: posts, cacheHint } = await getEmDashCollection("posts");
+const { entries: allPosts, cacheHint } = await getEmDashCollection("posts");
 
 Astro.cache.set(cacheHint);
+
+// Optional ?lang=en|es filter
+const lang = langFilter(Astro.url);
+const posts = filterByLanguage(allPosts, lang);
 
 const sortedPosts = posts.toSorted((a, b) => {
 	const dateA = a.data.publishedAt?.getTime() ?? 0;
@@ -43,11 +49,14 @@ const formatDate = (date: Date) =>
 				{posts.length}
 				{posts.length === 1 ? "article" : "articles"}
 			</p>
+			<div class="page-filter">
+				<LanguageFilter current={lang} />
+			</div>
 		</header>
 
 		{
 			sortedPosts.length === 0 ? (
-				<p class="empty">No posts yet.</p>
+				<p class="empty">{lang ? "No posts in this language yet." : "No posts yet."}</p>
 			) : (
 				<div class="posts-list">
 					{postsWithTags.map(({ post, tags, bylines }) => (
@@ -130,6 +139,10 @@ const formatDate = (date: Date) =>
 	.page-description {
 		font-size: var(--font-size-lg);
 		color: var(--color-muted);
+	}
+
+	.page-filter {
+		margin-top: var(--spacing-6);
 	}
 
 	.empty {

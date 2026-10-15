@@ -2,13 +2,19 @@
 import { getEmDashCollection, getEntryTerms } from "emdash";
 import { Image } from "emdash/ui";
 import Base from "../layouts/Base.astro";
+import LanguageFilter from "../components/LanguageFilter.astro";
 import PostCard from "../components/PostCard.astro";
+import { filterByLanguage, langFilter } from "../utils/language";
 import { getReadingTime } from "../utils/reading-time";
 import { blogPath } from "../utils/site";
 
-const { entries: posts, cacheHint } = await getEmDashCollection("posts");
+const { entries: allPosts, cacheHint } = await getEmDashCollection("posts");
 
 Astro.cache.set(cacheHint);
+
+// Optional ?lang=en|es filter
+const lang = langFilter(Astro.url);
+const posts = filterByLanguage(allPosts, lang);
 
 const sortedPosts = posts.toSorted((a, b) => {
 	const dateA = a.data.publishedAt?.getTime() ?? 0;
@@ -65,7 +71,7 @@ function formatDate(date: Date | null | undefined) {
 	description="Guides for small businesses: build a digital catalog or QR menu, take orders on WhatsApp, and share products with a link. In English and Spanish."
 >
 	{
-		posts.length === 0 ? (
+		allPosts.length === 0 ? (
 			<section class="empty-state">
 				<h2>No posts yet</h2>
 				<p>Create your first post in the admin panel.</p>
@@ -75,6 +81,12 @@ function formatDate(date: Date | null | undefined) {
 			</section>
 		) : (
 			<div class="home-content">
+				<div class="home-filter">
+					<LanguageFilter current={lang} />
+				</div>
+
+				{posts.length === 0 && <p class="no-posts">No posts in this language yet.</p>}
+
 				{/* Featured Post - Side by side */}
 				{featuredPost && (
 					<section class="featured-section">
@@ -155,7 +167,7 @@ function formatDate(date: Date | null | undefined) {
 						<header class="section-header">
 							<h2 class="section-title">Latest</h2>
 							{hasMorePosts && (
-								<a href={`${base}/posts`} class="section-link">
+								<a href={`${base}/posts${lang ? `?lang=${lang}` : ""}`} class="section-link">
 									View all
 								</a>
 							)}
@@ -186,6 +198,15 @@ function formatDate(date: Date | null | undefined) {
 		max-width: var(--wide-width);
 		margin: 0 auto;
 		padding: var(--spacing-16) var(--spacing-6);
+	}
+
+	.home-filter {
+		margin-bottom: var(--spacing-8);
+	}
+
+	.no-posts {
+		color: var(--color-muted);
+		font-size: var(--font-size-lg);
 	}
 
 	/* Featured Section - Side by side */
