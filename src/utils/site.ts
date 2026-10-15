@@ -19,8 +19,9 @@ export const DEFAULT_OG_IMAGE = `${SITE_ORIGIN}/og-image.png`;
 /**
  * Organization logo for structured data. Same URL as the main site's
  * Organization schema (`https://nicecatalogs.com/#organization`).
+ * 512x512 as required by Google (minimum 112x112).
  */
-export const PUBLISHER_LOGO = `${SITE_ORIGIN}/favicon.png`;
+export const PUBLISHER_LOGO = `${SITE_ORIGIN}/logo-512.png`;
 
 /**
  * Absolute URL for an EmDash media URL. EmDash builds media paths without

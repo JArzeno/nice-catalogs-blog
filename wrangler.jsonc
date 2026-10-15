@@ -6,6 +6,11 @@
 	"compatibility_flags": [
 		"nodejs_compat"
 	],
+	// No limits.cpu_ms set = Free plan (10 ms CPU limit per request).
+	// Concurrent cache misses can hit 1102 errors under burst load.
+	// Workers Paid ($5/mo) raises the limit to 30,000 ms and allows setting
+	// limits.cpu_ms (e.g. 5000). To enable: set usage_model = "unbound" and
+	// limits.cpu_ms, then Julio needs to upgrade the account to Workers Paid.
 	"d1_databases": [
 		{
 			"binding": "DB",

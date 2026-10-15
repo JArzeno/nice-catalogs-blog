@@ -10,9 +10,12 @@ const REPEATED_SLASHES_RE = /\/{2,}/g;
 const TRAILING_SLASHES_RE = /\/+$/;
 const NO_STORE_RE = /private|no-store/i;
 
-// How long anonymous HTML stays in the edge cache. Nothing purges the cache
-// on publish yet, so this is also the longest an edit takes to show up.
-const HTML_CACHE_TTL_SECONDS = 60;
+// How long anonymous HTML stays in the edge cache (1 hour).
+const HTML_CACHE_TTL_SECONDS = 3600;
+
+// Stale-while-revalidate: allow serving stale content for up to 24 hours
+// while fetching a fresh copy in the background.
+const HTML_SWR_SECONDS = 86400;
 
 // EmDash has two bugs when Astro's base: "/blog" is set:
 //
@@ -29,12 +32,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	const url = new URL(context.request.url);
 	const { pathname } = url;
 	const isGet = context.request.method === "GET";
+	
+	const startTime = Date.now();
 
 	// Normalize trailing slashes: redirect /blog/ to /blog. Repeated slashes are
 	// collapsed so a path like "//evil.com/" can't become an off-site redirect.
 	if (isGet && pathname.length > 1 && pathname.endsWith("/") && !EMDASH_ROUTE_RE.test(pathname)) {
 		const target = pathname.replace(REPEATED_SLASHES_RE, "/").replace(TRAILING_SLASHES_RE, "") || "/";
 		return Response.redirect(new URL(target + url.search, url.origin), 301);
+	}
+
+	// Short-path redirects for legacy links
+	const BLOG_REDIRECTS: Record<string, string> = {
+		"/blog/public-link-catalog": "/blog/posts/send-product-catalog-as-a-link",
+		"/blog/ai-image-enhancement": "/blog/posts/ai-product-photo-enhancement",
+	};
+	
+	if (isGet && BLOG_REDIRECTS[pathname]) {
+		return Response.redirect(new URL(BLOG_REDIRECTS[pathname] + url.search, url.origin), 301);
 	}
 
 	const mediaMatch = MEDIA_FILE_RE.exec(pathname);
@@ -74,6 +89,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
 	// Logged-in users (EmDash's auth middleware has already set locals.user),
 	// admin/API routes and any URL with a query string (search, preview and
 	// edit links) always render fresh and are never stored.
+	//
+	// Cache key includes build-time version (inlined via Vite define) to
+	// prevent serving stale HTML after a deploy. Version comes from
+	// WORKERS_CI_COMMIT_SHA (Workers Builds), CF_PAGES_COMMIT_SHA (Pages),
+	// or build timestamp.
 	const cache =
 		!import.meta.env.DEV &&
 		isGet &&
@@ -83,7 +103,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 			? // The DOM lib typing of `caches` (used by astro check) lacks Workers' `default` cache.
 				(caches as unknown as { default: Cache }).default
 			: null;
-	const cacheKey = new Request(url.toString());
+	
+	// @ts-expect-error __CACHE_VERSION__ is defined by Vite at build time
+	const cacheVersion = typeof __CACHE_VERSION__ !== "undefined" ? __CACHE_VERSION__ : "dev";
+	const cacheKey = new Request(`${url.toString()}?__v=${cacheVersion}`);
 
 	if (cache) {
 		const cached = await cache.match(cacheKey);
@@ -109,6 +132,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		statusText: response.statusText,
 		headers: response.headers,
 	});
+	
+	// Add Server-Timing header for performance monitoring
+	const renderTime = Date.now() - startTime;
+	result.headers.set("Server-Timing", `render;dur=${renderTime}`);
 
 	// Only store successful pages that are the same for every visitor.
 	if (
@@ -117,7 +144,18 @@ export const onRequest = defineMiddleware(async (context, next) => {
 		!response.headers.has("set-cookie") &&
 		!NO_STORE_RE.test(response.headers.get("cache-control") ?? "")
 	) {
-		result.headers.set("Cache-Control", `public, max-age=0, s-maxage=${HTML_CACHE_TTL_SECONDS}`);
+		// Use Cloudflare-CDN-Cache-Control for edge, keep browser cache short.
+		// This prevents Cloudflare's Browser Cache TTL setting from overriding
+		// the browser cache directive.
+		const browserCache = `public, max-age=60`;
+		const edgeCache = `max-age=${HTML_CACHE_TTL_SECONDS}, stale-while-revalidate=${HTML_SWR_SECONDS}`;
+		
+		result.headers.set("Cache-Control", browserCache);
+		result.headers.set("Cloudflare-CDN-Cache-Control", edgeCache);
+		
+		// Log for verification (Cloudflare strips CDN-Cache-Control from client responses)
+		console.log(`[cache] Set headers for ${url.pathname}: Cache-Control="${browserCache}", Cloudflare-CDN-Cache-Control="${edgeCache}", version="${cacheVersion}"`);
+		
 		context.locals.cfContext.waitUntil(cache.put(cacheKey, result.clone()));
 	}
 
