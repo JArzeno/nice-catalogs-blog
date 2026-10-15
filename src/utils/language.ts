@@ -1,9 +1,9 @@
 export type Lang = "en" | "es";
 
-/** Per-language settings for `og:locale` and date formatting. */
-export const LANGUAGES: Record<Lang, { ogLocale: string; dateLocale: string }> = {
-	en: { ogLocale: "en_US", dateLocale: "en-US" },
-	es: { ogLocale: "es_419", dateLocale: "es-DO" },
+/** Per-language settings for `og:locale`, date formatting and the language filter. */
+export const LANGUAGES: Record<Lang, { label: string; ogLocale: string; dateLocale: string }> = {
+	en: { label: "English", ogLocale: "en_US", dateLocale: "en-US" },
+	es: { label: "Español", ogLocale: "es_419", dateLocale: "es-DO" },
 };
 
 const WORD_RE = /\p{L}+/gu;
@@ -55,4 +55,18 @@ export function detectLanguage(text: string): Lang {
 export function postLanguage(data: { language?: unknown; title: string; excerpt?: string | null }): Lang {
 	if (isLang(data.language)) return data.language;
 	return detectLanguage(`${data.title} ${data.excerpt ?? ""}`);
+}
+
+/** The `?lang=` filter on post listings, or null (all languages) when missing or invalid. */
+export function langFilter(url: URL): Lang | null {
+	const value = url.searchParams.get("lang");
+	return isLang(value) ? value : null;
+}
+
+/** Posts in the given language, or all of them when `lang` is null. */
+export function filterByLanguage<T extends { data: Parameters<typeof postLanguage>[0] }>(
+	posts: T[],
+	lang: Lang | null,
+): T[] {
+	return lang ? posts.filter((post) => postLanguage(post.data) === lang) : posts;
 }

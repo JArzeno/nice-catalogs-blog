@@ -1,0 +1,75 @@
+---
+import { LANGUAGES, type Lang } from "../utils/language";
+
+interface Props {
+	/** The active `?lang=` filter, or null when showing every language. */
+	current: Lang | null;
+}
+
+const { current } = Astro.props;
+
+// Links back to the current listing. The unfiltered page stays the canonical
+// URL (Base drops the query string), so these don't create duplicate pages.
+const { pathname } = Astro.url;
+const options: Array<{ lang: Lang | null; label: string }> = [
+	{ lang: null, label: "All" },
+	{ lang: "en", label: LANGUAGES.en.label },
+	{ lang: "es", label: LANGUAGES.es.label },
+];
+---
+
+<nav class="lang-filter" aria-label="Filter posts by language">
+	{
+		options.map(({ lang, label }) => (
+			<a
+				href={lang ? `${pathname}?lang=${lang}` : pathname}
+				class="lang-option"
+				lang={lang ?? undefined}
+				aria-current={lang === current ? "page" : undefined}
+			>
+				{label}
+			</a>
+		))
+	}
+</nav>
+
+<style>
+	.lang-filter {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--spacing-2);
+	}
+
+	.lang-option {
+		display: inline-flex;
+		align-items: center;
+		padding: var(--spacing-1) var(--spacing-4);
+		font-size: var(--font-size-sm);
+		font-weight: 500;
+		color: var(--color-text-secondary);
+		background: var(--color-surface);
+		border: 1px solid var(--color-border-subtle);
+		border-radius: 9999px;
+		text-decoration: none;
+		transition:
+			color var(--transition-fast),
+			background var(--transition-fast),
+			border-color var(--transition-fast);
+	}
+
+	.lang-option:hover {
+		color: var(--color-text);
+		background: var(--color-border);
+	}
+
+	.lang-option:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 2px;
+	}
+
+	.lang-option[aria-current="page"] {
+		color: var(--color-on-accent);
+		background: var(--color-accent);
+		border-color: var(--color-accent);
+	}
+</style>
