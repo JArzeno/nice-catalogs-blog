@@ -4,6 +4,7 @@ export const prerender = false;
 import { getEmDashCollection } from "emdash";
 import Base from "../layouts/Base.astro";
 import PostCard from "../components/PostCard.astro";
+import Breadcrumbs from "../components/Breadcrumbs.astro";
 import { getReadingTime, extractText } from "../utils/reading-time";
 
 const query = Astro.url.searchParams.get("q")?.trim() || "";
@@ -32,6 +33,7 @@ const results = query ? allPosts.filter((p) => matchesQuery(p, query)) : [];
 	description="Search blog posts"
 >
 	<section class="search-page">
+		<Breadcrumbs items={[{ label: "Search" }]} />
 		<h1 class="search-title">Search</h1>
 
 		<form method="get" action={`${base}/search`} class="search-form">
@@ -86,6 +88,7 @@ const results = query ? allPosts.filter((p) => matchesQuery(p, query)) : [];
 
 	.search-title {
 		font-size: var(--font-size-2xl);
+		margin-top: var(--spacing-6);
 		margin-bottom: var(--spacing-6);
 	}
 

@@ -3,6 +3,7 @@ import { getTerm, getEmDashCollection, getEntryTerms } from "emdash";
 import Base from "../../layouts/Base.astro";
 import LanguageFilter from "../../components/LanguageFilter.astro";
 import PostCard from "../../components/PostCard.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
 import { filterByLanguage, langFilter } from "../../utils/language";
 import { getReadingTime } from "../../utils/reading-time";
 
@@ -40,6 +41,7 @@ const filteredPosts = await Promise.all(
 	description={`${filteredPosts.length} guide${filteredPosts.length === 1 ? "" : "s"} about ${term.label.toLowerCase()} for digital catalogs, QR menus, and online ordering.`}
 >
 	<section class="archive-section">
+		<Breadcrumbs items={[{ label: term.label }]} />
 		<header class="archive-header">
 			<span class="archive-label">Tag</span>
 			<h1 class="archive-title">{term.label}</h1>
@@ -81,10 +83,11 @@ const filteredPosts = await Promise.all(
 	.archive-section {
 		max-width: var(--wide-width);
 		margin: 0 auto;
-		padding: var(--spacing-12) var(--spacing-6);
+		padding: var(--spacing-8) var(--spacing-6) var(--spacing-12);
 	}
 
 	.archive-header {
+		margin-top: var(--spacing-8);
 		margin-bottom: var(--spacing-12);
 		padding-bottom: var(--spacing-8);
 		border-bottom: 1px solid var(--color-border-subtle);

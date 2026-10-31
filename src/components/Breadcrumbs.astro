@@ -1,0 +1,235 @@
+---
+import { safeJsonLdSerialize } from "emdash/page";
+import { SITE_ORIGIN, blogPath, canonicalFor } from "../utils/site";
+import type { Lang } from "../utils/language";
+
+export interface Crumb {
+	label: string;
+	/** Root-relative URL including the blog base. Omit for the current page. */
+	href?: string;
+}
+
+interface Props {
+	/** Crumbs after "Home > Blog". The last one is the current page. */
+	items: Crumb[];
+	lang?: Lang;
+}
+
+const { items, lang = "en" } = Astro.props;
+
+const labels = {
+	en: { home: "Home", blog: "Blog", nav: "Breadcrumb" },
+	es: { home: "Inicio", blog: "Blog", nav: "Ruta de navegación" },
+}[lang];
+
+const trail: Crumb[] = [
+	{ label: labels.home, href: "/" },
+	{ label: labels.blog, href: blogPath("") },
+	...items,
+];
+
+// The last crumb is the current page: never a link.
+const lastIndex = trail.length - 1;
+
+// BreadcrumbList structured data. The current page falls back to the canonical URL.
+const jsonLd = {
+	"@context": "https://schema.org",
+	"@type": "BreadcrumbList",
+	itemListElement: trail.map((crumb, i) => ({
+		"@type": "ListItem",
+		position: i + 1,
+		name: crumb.label,
+		item: crumb.href ? `${SITE_ORIGIN}${crumb.href}` : canonicalFor(Astro.url),
+	})),
+};
+---
+
+<nav class="breadcrumbs" aria-label={labels.nav}>
+	<ol class="breadcrumbs__list">
+		{
+			trail.map((crumb, i) => (
+				<li
+					class:list={["breadcrumbs__item", { "breadcrumbs__item--current": i === lastIndex }]}
+					style={`--i:${i}`}
+				>
+					{i > 0 && (
+						<svg
+							class="breadcrumbs__sep"
+							xmlns="http://www.w3.org/2000/svg"
+							width="14"
+							height="14"
+							viewBox="0 0 24 24"
+							fill="none"
+							stroke="currentColor"
+							stroke-width="2.25"
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							aria-hidden="true"
+						>
+							<polyline points="9 6 15 12 9 18" />
+						</svg>
+					)}
+					{i === lastIndex ? (
+						<span class="breadcrumbs__current" aria-current="page" title={crumb.label}>
+							{crumb.label}
+						</span>
+					) : (
+						<a class="breadcrumbs__link" href={crumb.href}>
+							{i === 0 && (
+								<svg
+									class="breadcrumbs__home"
+									xmlns="http://www.w3.org/2000/svg"
+									width="15"
+									height="15"
+									viewBox="0 0 24 24"
+									fill="none"
+									stroke="currentColor"
+									stroke-width="2"
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									aria-hidden="true"
+								>
+									<path d="M3 10.5 12 3l9 7.5" />
+									<path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5" />
+								</svg>
+							)}
+							<span class:list={{ "breadcrumbs__home-label": i === 0 }}>{crumb.label}</span>
+						</a>
+					)}
+				</li>
+			))
+		}
+	</ol>
+	<script type="application/ld+json" set:html={safeJsonLdSerialize(jsonLd)} />
+</nav>
+
+<style>
+	.breadcrumbs {
+		font-size: var(--font-size-sm);
+		line-height: var(--leading-snug);
+		color: var(--color-muted);
+	}
+
+	.breadcrumbs__list {
+		display: flex;
+		flex-wrap: nowrap;
+		align-items: center;
+		min-width: 0;
+		margin: 0;
+		padding: 0;
+		list-style: none;
+	}
+
+	.breadcrumbs__item {
+		display: inline-flex;
+		align-items: center;
+		flex-shrink: 0;
+		/* Each crumb slides in after the one before it */
+		animation: crumb-in 520ms cubic-bezier(0.22, 1, 0.36, 1) both;
+		animation-delay: calc(var(--i) * 70ms + 60ms);
+	}
+
+	/* Only the current page truncates, so the trail never wraps */
+	.breadcrumbs__item--current {
+		flex-shrink: 1;
+		min-width: 0;
+	}
+
+	.breadcrumbs__sep {
+		flex-shrink: 0;
+		margin: 0 var(--spacing-1);
+		color: var(--color-muted-light);
+		transition:
+			color var(--transition-base),
+			transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.breadcrumbs__link {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 2px 0;
+		color: var(--color-muted);
+		text-decoration: none;
+		/* Underline that grows from the left on hover */
+		background: linear-gradient(var(--color-accent), var(--color-accent)) 0 100% / 0 1.5px no-repeat;
+		transition:
+			color var(--transition-base),
+			background-size 320ms cubic-bezier(0.22, 1, 0.36, 1);
+	}
+
+	.breadcrumbs__link:hover,
+	.breadcrumbs__link:focus-visible {
+		color: var(--color-text);
+		background-size: 100% 1.5px;
+	}
+
+	.breadcrumbs__link:focus-visible {
+		outline: 2px solid var(--color-accent);
+		outline-offset: 3px;
+		border-radius: 2px;
+	}
+
+	.breadcrumbs__home {
+		flex-shrink: 0;
+		transition: transform 280ms cubic-bezier(0.34, 1.56, 0.64, 1);
+	}
+
+	.breadcrumbs__link:hover .breadcrumbs__home {
+		transform: translateY(-1px) scale(1.12);
+	}
+
+	.breadcrumbs__item:has(.breadcrumbs__link:hover) + .breadcrumbs__item .breadcrumbs__sep {
+		color: var(--color-accent);
+		transform: translateX(2px);
+	}
+
+	.breadcrumbs__current {
+		display: block;
+		max-width: 72ch;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-weight: 500;
+		color: var(--color-text);
+	}
+
+	@keyframes crumb-in {
+		from {
+			opacity: 0;
+			transform: translateX(-10px);
+		}
+		to {
+			opacity: 1;
+			transform: none;
+		}
+	}
+
+	/* Small screens: the home crumb keeps its icon, drops its label */
+	@media (max-width: 520px) {
+		.breadcrumbs__home-label {
+			position: absolute;
+			width: 1px;
+			height: 1px;
+			overflow: hidden;
+			clip-path: inset(50%);
+			white-space: nowrap;
+		}
+
+		.breadcrumbs__current {
+			max-width: none;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.breadcrumbs__item {
+			animation: none;
+		}
+
+		.breadcrumbs__link,
+		.breadcrumbs__home,
+		.breadcrumbs__sep {
+			transition: none;
+		}
+	}
+</style>

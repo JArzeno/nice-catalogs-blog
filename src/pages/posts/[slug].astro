@@ -15,6 +15,8 @@ import {
 import Base from "../../layouts/Base.astro";
 import BlogWidgetArea from "../../components/BlogWidgetArea.astro";
 import PostCard from "../../components/PostCard.astro";
+import Breadcrumbs from "../../components/Breadcrumbs.astro";
+import ReadingProgress from "../../components/ReadingProgress.astro";
 import { getReadingTime } from "../../utils/reading-time";
 import { LANGUAGES, postLanguage } from "../../utils/language";
 import { BLOG_URL, absoluteMediaUrl, absoluteUrl, blogPath } from "../../utils/site";
@@ -74,10 +76,11 @@ async function findTranslation() {
 	return entries[0] ?? null;
 }
 
-// Get tags, the translation and recent posts in parallel.
+// Get tags, category, the translation and recent posts in parallel.
 // Note: post.id is the slug, post.data.id is the database ULID
-const [tags, translation, { entries: recentPosts }] = await Promise.all([
+const [tags, categories, translation, { entries: recentPosts }] = await Promise.all([
 	getEntryTerms("posts", post.data.id, "tag"),
+	getEntryTerms("posts", post.data.id, "category"),
 	findTranslation(),
 	// Fetch a few extra in case the current post is among them
 	getEmDashCollection("posts", {
@@ -132,6 +135,13 @@ const uiStrings = {
 };
 const ui = uiStrings[lang];
 
+// Breadcrumb trail after "Home > Blog": the post's category (if it has one), then the post
+const category = categories[0];
+const crumbs = [
+	...(category ? [{ label: category.label, href: blogPath(`/category/${category.slug}`) }] : []),
+	{ label: post.data.title },
+];
+
 const otherPosts = recentPosts.filter((p) => p.id !== post.id).slice(0, 3);
 
 // Fetch tags for related posts (bylines are already hydrated by getEmDashCollection)
@@ -184,7 +194,12 @@ const faqJsonLd = faqItems.length > 0 ? {
 		{faqJsonLd && <script type="application/ld+json" set:html={safeJsonLdSerialize(faqJsonLd)} />}
 		{alternates.map((alt) => <link rel="alternate" hreflang={alt.hreflang} href={alt.href} />)}
 	</Fragment>
+	<ReadingProgress />
 	<article class="article">
+		<div class="article-crumbs">
+			<Breadcrumbs items={crumbs} lang={lang} />
+		</div>
+
 		{/* Hero: Full-width featured image */}
 		{
 			post.data.featured_image && (
@@ -439,9 +454,14 @@ const faqJsonLd = faqItems.length > 0 ? {
 		margin: 0 auto;
 	}
 
+	/* Breadcrumbs above the hero */
+	.article-crumbs {
+		padding: var(--spacing-6) var(--spacing-6) 0;
+	}
+
 	/* Hero image - full width within container */
 	.article-hero {
-		margin: var(--spacing-16) var(--spacing-6);
+		margin: var(--spacing-6) var(--spacing-6) var(--spacing-16);
 		border-radius: var(--radius-lg);
 		overflow: hidden;
 	}
@@ -464,6 +484,11 @@ const faqJsonLd = faqItems.length > 0 ? {
 		padding: 0 var(--spacing-6);
 		padding-top: var(--spacing-16);
 		margin-bottom: var(--spacing-16);
+	}
+
+	/* No hero: the breadcrumbs sit right above the grid */
+	.article-crumbs + .article-grid {
+		padding-top: var(--spacing-10);
 	}
 
 	/* Left column: Meta */
@@ -1070,6 +1095,10 @@ const faqJsonLd = faqItems.length > 0 ? {
 	}
 
 	@media (max-width: 900px) {
+		.article-crumbs {
+			padding: var(--spacing-4) var(--spacing-4) 0;
+		}
+
 		.article-hero {
 			margin: var(--spacing-4) var(--spacing-4) var(--spacing-8);
 			border-radius: var(--radius);
